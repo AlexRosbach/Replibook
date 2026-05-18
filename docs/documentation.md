@@ -9,7 +9,8 @@
 5. [Scanner Modules](#scanner-modules)
 6. [Generated Output](#generated-output)
 7. [Applying the Playbook](#applying-the-playbook)
-8. [Troubleshooting](#troubleshooting)
+8. [Operational Boundaries](#operational-boundaries)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -21,6 +22,8 @@ Replibook scans a running Linux or macOS machine and produces a working Ansible 
 - **macOS** — `Homebrew` formulas and casks, `brew services`
 
 Docker container and Docker Compose deployment scanning works identically on both platforms.
+
+For quick setup and common failure cases, also see the [Knowledge Base / FAQ](knowledgebase.md).
 
 ---
 
@@ -213,6 +216,16 @@ Then run from your workstation:
 ```bash
 ansible-playbook -i inventory.ini myhost_playbook.yml
 ```
+
+---
+
+## Operational Boundaries
+
+- Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, Docker containers and Compose deployments.
+- Generated playbooks can include sensitive Docker environment variables. Review and replace secrets with Ansible Vault variables before sharing output.
+- Linux package scanning currently targets apt/dpkg-based systems. RPM-based distributions are not supported yet.
+- macOS scanning targets Homebrew-managed packages and services. Launchd services outside Homebrew are not scanned.
+- Docker Compose discovery records project directories; it does not copy compose files or application data.
 
 ---
 

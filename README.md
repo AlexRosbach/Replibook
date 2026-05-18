@@ -1,19 +1,48 @@
+<div align="center">
+
 # Replibook
 
 **Scan a server. Generate an Ansible playbook. Reproduce it anywhere.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg)]()
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-6366f1)](https://github.com/AlexRosbach/Replibook/releases/tag/v1.0.0)
+[![Python](https://img.shields.io/badge/python-3.10%2B-0ea5e9)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-22c55e)](docs/documentation.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
 
 Replibook takes a snapshot of what's installed and running on your machine — packages, services, Docker containers, Compose deployments — and turns it into a ready-to-use Ansible playbook that recreates the same setup on another host.
 
 Works on **Linux** (apt + systemd) and **macOS** (Homebrew). Auto-detects which one you're on.
 
+</div>
+
+> [!IMPORTANT]
+> Generated playbooks can contain sensitive information, especially Docker environment variables and host-specific paths. Review generated output before committing, sharing, or applying it to another host.
+
 ---
 
-## 🚀 Quick Start (60 seconds)
+## Features
+
+- Automatic OS detection for Linux and macOS
+- Package scanning for apt/dpkg and Homebrew
+- Service scanning for systemd and Homebrew services
+- Docker container scanning via the Docker SDK
+- Docker Compose deployment discovery
+- Ansible playbook and matching inventory generation
+- Interactive CLI with a non-interactive `--all` mode
+
+---
+
+## Documentation
+
+- [Knowledge Base / FAQ](docs/knowledgebase.md)
+- [Extended documentation](docs/documentation.md)
+- [Report a bug](../../issues/new?template=bug_report.yml)
+
+Use the Knowledge Base for common setup problems and generated-playbook warnings. Use the extended documentation for installation, scanner details, output format, and troubleshooting.
+
+---
+
+## Quick Start
 
 ### 1. Install
 
@@ -202,9 +231,10 @@ replibook/
 
 ---
 
-## docs
+## Documentation
 
-- [Full documentation](docs/documentation.md) — installation, scanner details, troubleshooting
+- [Knowledge Base / FAQ](docs/knowledgebase.md)
+- [Extended documentation](docs/documentation.md)
 
 ---
 

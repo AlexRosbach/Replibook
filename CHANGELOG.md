@@ -4,7 +4,7 @@ All notable changes to Replibook are documented here.
 
 ---
 
-## [1.0.0] — 2025-05-18
+## [1.0.0] — 2026-05-18
 
 ### Added
 - Cross-platform support: auto-detects **Linux** and **macOS**

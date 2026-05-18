@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "replibook"
 version = "1.0.0"
-description = "Scan a Linux server and generate Ansible playbooks to reproduce it."
+description = "Scan Linux or macOS hosts and generate Ansible playbooks to reproduce them."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
@@ -18,6 +18,7 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -38,9 +39,9 @@ dependencies = [
 replibook = "replibook.main:main"
 
 [project.urls]
-Homepage = "https://github.com/AlexRosbach/replibook"
-Documentation = "https://github.com/AlexRosbach/replibook/blob/main/docs/documentation.md"
-Issues = "https://github.com/AlexRosbach/replibook/issues"
+Homepage = "https://github.com/AlexRosbach/Replibook"
+Documentation = "https://github.com/AlexRosbach/Replibook/blob/main/docs/documentation.md"
+Issues = "https://github.com/AlexRosbach/Replibook/issues"
 
 [tool.setuptools.packages.find]
 include = ["replibook*"]
