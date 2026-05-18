@@ -177,7 +177,7 @@ def _canonicalize(value) -> set[str]:
     if isinstance(value, list):
         return {json.dumps(item, sort_keys=True) for item in value}
     if isinstance(value, dict):
-        if all(isinstance(v, (str, int, float, bool, type(None))) for v in value.values()):
+        if all(v is None or isinstance(v, (str, int, float, bool)) for v in value.values()):
             return {f"{k}={value[k]}" for k in sorted(value.keys())}
         result = set()
         for k, v in value.items():

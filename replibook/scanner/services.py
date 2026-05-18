@@ -69,11 +69,9 @@ class ServiceScanner(BaseScanner):
     # ── macOS (Homebrew services) ─────────────────────────────────────────
 
     def _scan_macos(self) -> list[ServiceInfo]:
-        if not has_command("brew"):
-            services = []
-        else:
+        services = []
+        if has_command("brew"):
             output = self._run(["brew", "services", "list"])
-            services = []
 
             for line in output.splitlines()[1:]:  # skip header
                 parts = line.split()

@@ -74,8 +74,11 @@
     # ── Systemd User Services ──────────────────────────────────────────────────
 {% for svc in systemd_user_services %}
     - name: Ensure user service {{ svc.name | tojson }} is {{ svc.state }}
-      ansible.builtin.command: systemctl --user {{ "enable --now" if svc.state == "started" else "disable --now" }} {{ svc.name | tojson }}
-      changed_when: false
+      ansible.builtin.systemd:
+        name: {{ svc.name | tojson }}
+        scope: user
+        state: {{ svc.state }}
+        enabled: {{ "true" if svc.enabled else "false" }}
 
 {% endfor %}
 {% endif %}
