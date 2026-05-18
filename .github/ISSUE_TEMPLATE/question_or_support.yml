@@ -1,0 +1,23 @@
+name: Question / Support
+description: Ask a question or get help
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      placeholder: What would you like to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: |
+        - Replibook version:
+        - OS / distro:
+        - What you have tried so far:
+    validations:
+      required: false

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "replibook"
+version = "1.0.0"
+description = "Scan a Linux server and generate Ansible playbooks to reproduce it."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Alexander Rosbach" }
+]
+keywords = ["ansible", "playbook", "devops", "linux", "docker", "automation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+    "questionary>=2.0.1",
+    "jinja2>=3.1.4",
+    "docker>=7.1.0",
+    "pyyaml>=6.0.1",
+]
+
+[project.scripts]
+replibook = "replibook.main:main"
+
+[project.urls]
+Homepage = "https://github.com/AlexRosbach/replibook"
+Documentation = "https://github.com/AlexRosbach/replibook/blob/main/docs/documentation.md"
+Issues = "https://github.com/AlexRosbach/replibook/issues"
+
+[tool.setuptools.packages.find]
+include = ["replibook*"]
+
+[tool.setuptools.package-data]
+replibook = ["generator/templates/*.j2"]
