@@ -6,7 +6,7 @@
   hosts: replibook
   become: {{ "true" if use_become else "false" }}
   tasks:
-{% set has_any = apt_packages or brew_packages or cask_packages or systemd_services or brew_services or containers or deployments %}
+{% set has_any = apt_packages or brew_packages or cask_packages or other_packages or systemd_services or systemd_user_services or brew_services or launchd_services or containers or deployments or (config and (config.users or config.groups or config.cron_jobs or config.ssh_settings or config.firewall_rules or config.mounts or config.sysctl)) %}
 {% if not has_any %}
     - name: Replibook scan returned no results
       ansible.builtin.debug:
@@ -48,6 +48,17 @@
         state: present
 
 {% endif %}
+{% if other_packages %}
+    # ── Generic Linux Packages (rpm/dnf/yum/zypper/pacman) ───────────────────
+    - name: Install non-apt Linux packages
+      ansible.builtin.package:
+        name:
+{% for pkg in other_packages %}
+          - {{ pkg.name | tojson }}
+{% endfor %}
+        state: present
+
+{% endif %}
 {% if systemd_services %}
     # ── Systemd Services ──────────────────────────────────────────────────────
 {% for svc in systemd_services %}
@@ -56,6 +67,15 @@
         name: {{ svc.name | tojson }}
         state: {{ svc.state }}
         enabled: {{ "true" if svc.enabled else "false" }}
+
+{% endfor %}
+{% endif %}
+{% if systemd_user_services %}
+    # ── Systemd User Services ──────────────────────────────────────────────────
+{% for svc in systemd_user_services %}
+    - name: Ensure user service {{ svc.name | tojson }} is {{ svc.state }}
+      ansible.builtin.command: systemctl --user {{ "enable --now" if svc.state == "started" else "disable --now" }} {{ svc.name | tojson }}
+      changed_when: false
 
 {% endfor %}
 {% endif %}
@@ -68,6 +88,16 @@
         state: {{ svc.state }}
 
 {% endfor %}
+{% endif %}
+{% if launchd_services %}
+    # ── Launchd Services (discovered) ──────────────────────────────────────────
+    - name: Discovered launchd services (manual review)
+      ansible.builtin.debug:
+        msg:
+{% for svc in launchd_services %}
+          - {{ svc.name | tojson }}
+{% endfor %}
+
 {% endif %}
 {% if containers %}
     # ── Docker Containers ──────────────────────────────────────────────────────
@@ -104,8 +134,79 @@
 {% for d in deployments %}
     - name: Deploy {{ d.name | tojson }}
       community.docker.docker_compose_v2:
-        project_src: {{ d.directory | tojson }}
+        project_src: {{ d.project_src | tojson }}
         state: present
 
 {% endfor %}
+{% endif %}
+{% if config and config.groups %}
+    # ── System Groups ───────────────────────────────────────────────────────────
+{% for group_name in config.groups %}
+    - name: Ensure group {{ group_name | tojson }} exists
+      ansible.builtin.group:
+        name: {{ group_name | tojson }}
+        state: present
+
+{% endfor %}
+{% endif %}
+{% if config and config.users %}
+    # ── System Users ────────────────────────────────────────────────────────────
+{% for user_name in config.users %}
+    - name: Ensure user {{ user_name | tojson }} exists
+      ansible.builtin.user:
+        name: {{ user_name | tojson }}
+        state: present
+
+{% endfor %}
+{% endif %}
+{% if config and config.cron_jobs %}
+    # ── Cron Entries ────────────────────────────────────────────────────────────
+{% for cron in config.cron_jobs %}
+    - name: Recreate cron line from {{ cron.source | tojson }}
+      ansible.builtin.lineinfile:
+        path: {{ cron.source | tojson }}
+        line: {{ cron.line | tojson }}
+        create: true
+        state: present
+
+{% endfor %}
+{% endif %}
+{% if config and config.ssh_settings %}
+    # ── SSHD Settings ───────────────────────────────────────────────────────────
+{% for setting in config.ssh_settings %}
+    - name: Ensure sshd {{ setting.key | tojson }} is configured
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^{{ setting.key }}\\s+'
+        line: '{{ setting.key }} {{ setting.value }}'
+        create: true
+        state: present
+
+{% endfor %}
+{% endif %}
+{% if config and config.sysctl %}
+    # ── Sysctl Settings ─────────────────────────────────────────────────────────
+{% for key, value in config.sysctl.items() %}
+    - name: Ensure sysctl {{ key | tojson }} is set
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^{{ key }}\\s*='
+        line: '{{ key }} = {{ value }}'
+        create: true
+        state: present
+
+{% endfor %}
+{% endif %}
+{% if config and (config.firewall_rules or config.mounts) %}
+    # ── Captured Host State (manual review) ────────────────────────────────────
+    - name: Captured firewall rules and mounts
+      ansible.builtin.debug:
+        msg:
+{% for line in config.firewall_rules %}
+          - {{ ("firewall: " ~ line) | tojson }}
+{% endfor %}
+{% for line in config.mounts %}
+          - {{ ("mount: " ~ line) | tojson }}
+{% endfor %}
+
 {% endif %}

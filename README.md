@@ -23,12 +23,15 @@ Works on **Linux** (apt + systemd) and **macOS** (Homebrew). Auto-detects which 
 ## Features
 
 - Automatic OS detection for Linux and macOS
-- Package scanning for apt/dpkg and Homebrew
-- Service scanning for systemd and Homebrew services
+- Package scanning for apt/dpkg, dnf/yum/zypper/rpm/pacman, and Homebrew
+- Service scanning for systemd, optional systemd user services, Homebrew, and optional launchd discovery
 - Docker container scanning via the Docker SDK
-- Docker Compose deployment discovery
+- Docker env secret redaction and optional Vault placeholder generation
+- Docker Compose deployment discovery with optional compose/env export
+- Host configuration scanning (users, groups, cron, SSH, firewall, mounts, sysctl)
 - Ansible playbook and matching inventory generation
-- Interactive CLI with a non-interactive `--all` mode
+- Interactive CLI plus granular non-interactive module flags
+- Snapshot export and diff mode for change tracking
 
 ---
 
@@ -115,6 +118,16 @@ replibook --all
 
 # Custom output directory
 replibook --all --output /opt/playbooks
+
+# Select modules directly in non-interactive mode
+replibook --packages --services --docker --deployments --config
+
+# Export compose files and generate vault placeholders for secrets
+replibook --all --export-compose --vault-env-prefix vault
+
+# Write and compare snapshots
+replibook --all --snapshot ./snapshots/host-a.json
+replibook diff ./snapshots/host-a.json ./snapshots/host-b.json
 
 # Help
 replibook --help

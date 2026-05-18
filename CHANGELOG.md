@@ -4,6 +4,20 @@ All notable changes to Replibook are documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+- Linux package scanning support for `dnf`, `yum`, `zypper`, `rpm` and `pacman`
+- Host configuration/state scanner (users, groups, cron, SSH settings, firewall output, mounts, selected sysctl)
+- Docker env secret redaction by default and optional Vault placeholder generation (`--vault-env-prefix`)
+- Optional compose/env export into output directory (`--export-compose`)
+- Granular module selection flags (`--packages`, `--services`, `--docker`, `--deployments`, `--config`)
+- Snapshot generation (`--snapshot`) and snapshot diff command (`replibook diff <old> <new>`)
+- Optional service expansion flags (`--include-user-services`, `--include-launchd`)
+- Initial unit-test suite (`unittest`) and GitHub Actions CI/release validation workflows
+
+---
+
 ## [1.0.0] — 2026-05-18
 
 ### Added

@@ -9,6 +9,10 @@ _LINUX_SKIP_PREFIXES = (
 
 
 class ServiceScanner(BaseScanner):
+    def __init__(self, include_user_services: bool = False, include_launchd: bool = False):
+        self.include_user_services = include_user_services
+        self.include_launchd = include_launchd
+
     def scan(self) -> list[ServiceInfo]:
         os_name = detect_os()
         if os_name == "macos":
@@ -23,6 +27,11 @@ class ServiceScanner(BaseScanner):
 
         enabled = self._systemctl_set(["--state=enabled"], "list-unit-files")
         active = self._systemctl_set(["--state=active"], "list-units")
+        user_enabled = set()
+        user_active = set()
+        if self.include_user_services:
+            user_enabled = self._systemctl_set(["--user", "--state=enabled"], "list-unit-files")
+            user_active = self._systemctl_set(["--user", "--state=active"], "list-units")
 
         services = []
         for name in sorted(enabled | active):
@@ -33,6 +42,15 @@ class ServiceScanner(BaseScanner):
                 enabled=name in enabled,
                 state="started" if name in active else "stopped",
                 manager="systemd",
+            ))
+        for name in sorted(user_enabled | user_active):
+            if any(name.startswith(p) for p in _LINUX_SKIP_PREFIXES):
+                continue
+            services.append(ServiceInfo(
+                name=name,
+                enabled=name in user_enabled,
+                state="started" if name in user_active else "stopped",
+                manager="systemd_user",
             ))
         return services
 
@@ -52,23 +70,39 @@ class ServiceScanner(BaseScanner):
 
     def _scan_macos(self) -> list[ServiceInfo]:
         if not has_command("brew"):
-            return []
+            services = []
+        else:
+            output = self._run(["brew", "services", "list"])
+            services = []
 
-        output = self._run(["brew", "services", "list"])
-        services = []
+            for line in output.splitlines()[1:]:  # skip header
+                parts = line.split()
+                if len(parts) < 2:
+                    continue
+                name = parts[0]
+                status = parts[1].lower()
+                if status == "none":
+                    continue
+                services.append(ServiceInfo(
+                    name=name,
+                    enabled=status == "started",
+                    state="started" if status == "started" else "stopped",
+                    manager="homebrew",
+                ))
 
-        for line in output.splitlines()[1:]:  # skip header
-            parts = line.split()
-            if len(parts) < 2:
-                continue
-            name = parts[0]
-            status = parts[1].lower()
-            if status == "none":
-                continue
-            services.append(ServiceInfo(
-                name=name,
-                enabled=status == "started",
-                state="started" if status == "started" else "stopped",
-                manager="homebrew",
-            ))
+        if self.include_launchd and has_command("launchctl"):
+            output = self._run(["launchctl", "list"])
+            for line in output.splitlines()[1:]:
+                parts = line.split()
+                if len(parts) < 3:
+                    continue
+                label = parts[-1].strip()
+                if label.startswith("com.apple."):
+                    continue
+                services.append(ServiceInfo(
+                    name=label,
+                    enabled=True,
+                    state="started",
+                    manager="launchd",
+                ))
         return sorted(services, key=lambda s: s.name)

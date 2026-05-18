@@ -13,6 +13,17 @@ class PackageScanner(BaseScanner):
     # ── Linux (apt / dpkg) ────────────────────────────────────────────────
 
     def _scan_linux(self) -> list[PackageInfo]:
+        if has_command("pacman"):
+            return self._scan_pacman()
+        if has_command("dnf"):
+            return self._scan_rpm_like("dnf")
+        if has_command("yum"):
+            return self._scan_rpm_like("yum")
+        if has_command("zypper"):
+            return self._scan_rpm_like("zypper")
+        if has_command("rpm"):
+            return self._scan_rpm_like("rpm")
+
         packages = []
 
         if has_command("apt-mark"):
@@ -39,6 +50,30 @@ class PackageScanner(BaseScanner):
                         manager="apt",
                     ))
 
+        return sorted(packages, key=lambda p: p.name)
+
+    def _scan_rpm_like(self, manager: str) -> list[PackageInfo]:
+        if not has_command("rpm"):
+            return []
+        packages = []
+        output = self._run(["rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\n"])
+        for line in output.splitlines():
+            parts = line.split("\t", 1)
+            if len(parts) == 2 and parts[0].strip():
+                packages.append(PackageInfo(
+                    name=parts[0].strip(),
+                    version=parts[1].strip(),
+                    manager=manager,
+                ))
+        return sorted(packages, key=lambda p: p.name)
+
+    def _scan_pacman(self) -> list[PackageInfo]:
+        output = self._run(["pacman", "-Qe"])
+        packages = []
+        for line in output.splitlines():
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                packages.append(PackageInfo(name=parts[0].strip(), version=parts[1].strip(), manager="pacman"))
         return sorted(packages, key=lambda p: p.name)
 
     def _dpkg_versions(self, names: list[str]) -> dict[str, str]:

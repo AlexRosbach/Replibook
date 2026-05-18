@@ -101,6 +101,18 @@ replibook --all --output /opt/playbooks
 |---|---|---|---|
 | `--output` | `-o` | `./playbooks` | Directory where playbooks are written |
 | `--all` | `-a` | `false` | Skip menu, run all modules |
+| `--packages/--no-packages` | | interactive | Toggle package scanning |
+| `--services/--no-services` | | interactive | Toggle service scanning |
+| `--docker/--no-docker` | | interactive | Toggle Docker container scanning |
+| `--deployments/--no-deployments` | | interactive | Toggle compose deployment scanning |
+| `--config/--no-config` | | interactive | Toggle host config/state scanning |
+| `--redact-secrets/--no-redact-secrets` | | `true` | Redact detected secret env vars from Docker output |
+| `--vault-env-prefix` | | | Generate Vault-style placeholders for detected Docker secrets |
+| `--export-compose/--no-export-compose` | | `false` | Export compose and discovered env files into output directory |
+| `--include-user-services` | | `false` | Include `systemctl --user` services (Linux) |
+| `--include-launchd` | | `false` | Include launchd service discovery (macOS) |
+| `--snapshot` | | | Write scan snapshot JSON |
+| `diff <old> <new>` | | | Compare two snapshots and show added/removed items |
 | `--version` | | | Print version and exit |
 | `--help` | | | Show help and exit |
 
@@ -110,7 +122,7 @@ replibook --all --output /opt/playbooks
 
 ### Packages
 
-**Linux:** Reads `apt-mark showmanual` to get packages the user explicitly installed (not auto-installed dependencies). Falls back to `dpkg-query` if `apt-mark` is unavailable. Generates `ansible.builtin.apt` tasks.
+**Linux:** Supports `apt`/`dpkg`, `dnf`/`yum`/`zypper`/`rpm`, and `pacman` package inventories. Generates `ansible.builtin.apt` tasks for apt and `ansible.builtin.package` tasks for other Linux package sets.
 
 **macOS:** Reads `brew list --installed-on-request --formula` (formulas) and `brew list --cask` (apps). Generates `community.general.homebrew` and `community.general.homebrew_cask` tasks.
 
@@ -118,13 +130,15 @@ replibook --all --output /opt/playbooks
 
 **Linux:** Reads `systemctl list-unit-files --state=enabled` (enabled services) and `list-units --state=active` (currently running). Kernel/transient units are filtered. Generates `ansible.builtin.service` tasks.
 
-**macOS:** Reads `brew services list` to find Homebrew-managed services. Generates `community.general.homebrew_services` tasks. (Launchd-only services outside Homebrew are not scanned.)
+**macOS:** Reads `brew services list` to find Homebrew-managed services. Generates `community.general.homebrew_services` tasks. Optional `--include-launchd` adds launchd discovery metadata.
+
+**Linux optional:** `--include-user-services` adds `systemctl --user` service discovery.
 
 ### Docker Containers
 
 Connects to the local Docker daemon via the Docker SDK. Captures container name, image, port mappings, volume mounts, environment variables, and restart policy. Generates `community.docker.docker_container` tasks.
 
-> ⚠ Environment variables are included verbatim. **Review before committing** — replace any secrets with Ansible Vault references.
+By default, secret-like env keys are redacted. Use `--vault-env-prefix` to emit Vault-style placeholders and generate `vault_vars.example.yml`.
 
 ### Docker Compose Deployments
 
@@ -134,7 +148,11 @@ Search roots:
 - **Linux:** `/opt`, `/srv`, `/home`, `/root`, `/docker`, `/var/lib`
 - **macOS:** `/Users`, `/opt`, `/usr/local`
 
-Generates `community.docker.docker_compose_v2` tasks.
+Generates `community.docker.docker_compose_v2` tasks. With `--export-compose`, compose and referenced env files are copied into the output folder and playbook tasks point to that exported project source.
+
+### Host Configuration & State
+
+Captures users, groups, cron entries, SSH daemon settings, firewall rule output, mount information, and selected sysctl keys. Where exact cross-platform idempotent automation is not guaranteed, data is still included for operator review.
 
 ---
 
@@ -221,11 +239,9 @@ ansible-playbook -i inventory.ini myhost_playbook.yml
 
 ## Operational Boundaries
 
-- Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, Docker containers and Compose deployments.
-- Generated playbooks can include sensitive Docker environment variables. Review and replace secrets with Ansible Vault variables before sharing output.
-- Linux package scanning currently targets apt/dpkg-based systems. RPM-based distributions are not supported yet.
-- macOS scanning targets Homebrew-managed packages and services. Launchd services outside Homebrew are not scanned.
-- Docker Compose discovery records project directories; it does not copy compose files or application data.
+- Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, host config/state, Docker containers and Compose deployments.
+- Secret-like Docker env values are redacted by default; verify generated output before sharing.
+- Some captured host state sections are emitted for manual review because exact cross-OS automation differs by environment.
 
 ---
 
