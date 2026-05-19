@@ -45,29 +45,29 @@ For quick setup and common failure cases, also see the [Knowledge Base / FAQ](kn
 **macOS:**
 ```bash
 brew install pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
 ```
 
 **Linux:**
 ```bash
 apt install pipx
 # or: pip install --user pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
 ```
 
 ### Install a specific version
 
 ```bash
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
-# replace @v1.0.0 with another tag, or omit @<tag> for latest development
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+# replace @v1.0.1 with another tag, or omit @<tag> for latest development
 ```
 
 ### Alternative: pip from GitHub
 
 ```bash
-python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
 # or inside a virtual environment:
-python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
 ```
 
 ### From source
@@ -91,8 +91,9 @@ replibook
 ```
 
 You'll be prompted to:
-1. Select which modules to scan (checkbox menu, all selected by default)
+1. Select which modules to scan, with a short explanation for each module
 2. Confirm or change the output directory
+3. Decide whether the generated inventory targets this machine or another host over SSH
 
 ### One-shot mode
 
@@ -102,6 +103,15 @@ replibook --all
 
 # Scan everything, custom output dir
 replibook --all --output /opt/playbooks
+
+# Scan everything and generate SSH inventory for another host
+replibook --all \
+  --target-connection ssh \
+  --target-name web01 \
+  --target-host 192.168.1.50 \
+  --target-user ubuntu \
+  --target-port 22 \
+  --target-key ~/.ssh/id_rsa
 ```
 
 ### All options
@@ -110,8 +120,34 @@ replibook --all --output /opt/playbooks
 |---|---|---|---|
 | `--output` | `-o` | `./playbooks` | Directory where playbooks are written |
 | `--all` | `-a` | `false` | Skip menu, run all modules |
+| `--target-connection` | | `local` | Inventory connection type: `local` or `ssh` |
+| `--target-name` | | | Inventory host name |
+| `--target-host` | | | Target IP address or hostname for SSH inventory |
+| `--target-user` | | | SSH user for generated inventory |
+| `--target-port` | | | SSH port for generated inventory |
+| `--target-key` | | | SSH private key path for generated inventory |
+| `--target-become` / `--no-target-become` | | OS default | Override sudo/become usage in the generated playbook |
 | `--version` | | | Print version and exit |
 | `--help` | | | Show help and exit |
+
+### Apply command
+
+Replibook can also guide the handoff to Ansible:
+
+```bash
+# Confirm and apply a generated playbook
+replibook apply ./playbooks/myhost_playbook.yml --inventory ./playbooks/inventory.ini
+
+# Dry-run with Ansible check mode
+replibook apply ./playbooks/myhost_playbook.yml --inventory ./playbooks/inventory.ini --check
+
+# Install missing Ansible dependencies before applying
+replibook apply ./playbooks/myhost_playbook.yml --inventory ./playbooks/inventory.ini --install-deps
+```
+
+The `apply` command does not hide Ansible. It validates the selected files, offers to install missing Ansible dependencies, shows what will run, asks for confirmation, then calls `ansible-playbook`.
+
+If network-related configuration is detected, Replibook asks for a second confirmation before applying changes. In non-interactive runs, network-sensitive playbooks require `--confirm-network-changes`; otherwise Replibook refuses to apply them.
 
 ---
 
@@ -154,13 +190,20 @@ Two files written to the output directory:
 | File | Description |
 |---|---|
 | `<hostname>_playbook.yml` | The Ansible playbook |
-| `inventory.ini` | Inventory file with the source host pre-configured for local execution |
+| `inventory.ini` | Inventory file for local execution or the SSH target selected in the wizard/options |
 
 ### inventory.ini
 
 ```ini
 [replibook]
 myhost ansible_connection=local
+```
+
+SSH target:
+
+```ini
+[replibook]
+web01 ansible_host=192.168.1.50 ansible_user=ubuntu ansible_port=22 ansible_ssh_private_key_file=~/.ssh/id_rsa
 ```
 
 ### Playbook structure
@@ -187,33 +230,31 @@ myhost ansible_connection=local
 
 ## Applying the Playbook
 
-### 1. Install Ansible on the target machine
+### 1. Install Ansible dependencies
+
+Replibook can install Ansible and common required collections when `apply` runs:
+
+```bash
+replibook apply myhost_playbook.yml --inventory inventory.ini --install-deps
+```
+
+Manual equivalent:
 
 ```bash
 pip install ansible
-```
-
-### 2. Install required collections
-
-Depending on what your playbook contains:
-
-```bash
-# For Docker tasks
 ansible-galaxy collection install community.docker
-
-# For Homebrew tasks (macOS targets)
 ansible-galaxy collection install community.general
 ```
 
-### 3. Apply locally
+### 2. Apply locally
 
 ```bash
-ansible-playbook -i inventory.ini myhost_playbook.yml
+replibook apply myhost_playbook.yml --inventory inventory.ini
 ```
 
-### 4. Apply remotely
+### 3. Apply remotely
 
-Edit `inventory.ini` and replace the local connection with SSH details:
+Either configure the SSH target in the Replibook wizard or edit `inventory.ini` manually:
 
 ```ini
 [replibook]
@@ -223,7 +264,15 @@ Edit `inventory.ini` and replace the local connection with SSH details:
 Then run from your workstation:
 
 ```bash
-ansible-playbook -i inventory.ini myhost_playbook.yml
+replibook apply myhost_playbook.yml --inventory inventory.ini
+```
+
+Use `--check` first if you want Ansible to report planned changes without applying them.
+
+Network-sensitive playbooks are guarded:
+
+```bash
+replibook apply network_playbook.yml --inventory inventory.ini --yes --confirm-network-changes
 ```
 
 ---
@@ -232,9 +281,12 @@ ansible-playbook -i inventory.ini myhost_playbook.yml
 
 - Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, Docker containers and Compose deployments.
 - Generated playbooks can include sensitive Docker environment variables. Review and replace secrets with Ansible Vault variables before sharing output.
+- Replibook does not back up Docker volumes, bind-mounted files, databases, uploads, application data or arbitrary files. Back up and restore data separately.
+- The `apply` command is a convenience wrapper around `ansible-playbook`; understanding and reviewing the generated playbook still matters.
+- Network-related playbooks require extra confirmation because they can interrupt SSH connectivity or remote access.
 - Linux package scanning currently targets apt/dpkg-based systems. RPM-based distributions are not supported yet.
 - macOS scanning targets Homebrew-managed packages and services. Launchd services outside Homebrew are not scanned.
-- Docker Compose discovery records project directories; it does not copy compose files or application data.
+- Docker Compose discovery records project directories; it does not copy compose files, env files or application data.
 
 ---
 

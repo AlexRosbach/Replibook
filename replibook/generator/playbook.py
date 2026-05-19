@@ -1,4 +1,5 @@
 import socket
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -7,10 +8,43 @@ from jinja2 import Environment, FileSystemLoader
 from replibook.utils import detect_os
 
 
+@dataclass
+class TargetConfig:
+    name: str
+    connection: str = "local"
+    host: str | None = None
+    user: str | None = None
+    port: int | None = None
+    identity_file: str | None = None
+
+    def inventory_line(self) -> str:
+        if self.connection == "local":
+            return f"{self.name} ansible_connection=local"
+
+        parts = [self.name]
+        if self.host:
+            parts.append(f"ansible_host={self.host}")
+        if self.user:
+            parts.append(f"ansible_user={self.user}")
+        if self.port:
+            parts.append(f"ansible_port={self.port}")
+        if self.identity_file:
+            parts.append(f"ansible_ssh_private_key_file={self.identity_file}")
+        return " ".join(parts)
+
+
 class PlaybookGenerator:
-    def __init__(self, scan_results: dict, output_dir: str):
+    def __init__(
+        self,
+        scan_results: dict,
+        output_dir: str,
+        target: TargetConfig | None = None,
+        use_become: bool | None = None,
+    ):
         self.scan_results = scan_results
         self.output_dir = Path(output_dir)
+        self.target = target
+        self.use_become = use_become
         template_dir = Path(__file__).parent / "templates"
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
@@ -25,6 +59,8 @@ class PlaybookGenerator:
         hostname = socket.gethostname()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         host_os = detect_os()
+        target = self.target or TargetConfig(name=hostname)
+        use_become = self.use_become if self.use_become is not None else (host_os == "linux")
 
         packages = self.scan_results.get("packages", [])
         services = self.scan_results.get("services", [])
@@ -34,7 +70,7 @@ class PlaybookGenerator:
             hostname=hostname,
             timestamp=timestamp,
             host_os=host_os,
-            use_become=(host_os == "linux"),
+            use_become=use_become,
             apt_packages=[p for p in packages if p.manager == "apt"],
             brew_packages=[p for p in packages if p.manager == "homebrew"],
             cask_packages=[p for p in packages if p.manager == "homebrew_cask"],
@@ -48,6 +84,6 @@ class PlaybookGenerator:
         playbook_file.write_text(playbook)
 
         inventory_file = self.output_dir / "inventory.ini"
-        inventory_file.write_text(f"[replibook]\n{hostname} ansible_connection=local\n")
+        inventory_file.write_text(f"[replibook]\n{target.inventory_line()}\n")
 
         return str(playbook_file), str(inventory_file)

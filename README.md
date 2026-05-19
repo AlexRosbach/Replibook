@@ -4,7 +4,7 @@
 
 **Scan a server. Generate an Ansible playbook. Reproduce it anywhere.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-6366f1)](https://github.com/AlexRosbach/Replibook/releases/tag/v1.0.0)
+[![Version](https://img.shields.io/badge/version-1.0.1-6366f1)](https://github.com/AlexRosbach/Replibook/releases/tag/v1.0.1)
 [![Python](https://img.shields.io/badge/python-3.10%2B-0ea5e9)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-22c55e)](docs/documentation.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
@@ -17,6 +17,8 @@ Works on **Linux** (apt + systemd) and **macOS** (Homebrew). Auto-detects which 
 
 > [!IMPORTANT]
 > Generated playbooks can contain sensitive information, especially Docker environment variables and host-specific paths. Review generated output before committing, sharing, or applying it to another host.
+>
+> Replibook does **not** back up Docker volumes, bind-mounted files, databases, uploads, application data or arbitrary files. It generates reproduction tasks from discovered configuration metadata; handle data backups separately.
 
 ---
 
@@ -28,7 +30,9 @@ Works on **Linux** (apt + systemd) and **macOS** (Homebrew). Auto-detects which 
 - Docker container scanning via the Docker SDK
 - Docker Compose deployment discovery
 - Ansible playbook and matching inventory generation
-- Interactive CLI with a non-interactive `--all` mode
+- Guided CLI with explained module prompts
+- Local and SSH target inventory configuration
+- Optional guided `apply` command for generated playbooks, including Ansible dependency setup
 
 ---
 
@@ -47,12 +51,12 @@ Use the Knowledge Base for common setup problems and generated-playbook warnings
 ### 1. Install
 
 ```bash
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
 ```
 
 > No `pipx`? Install it once: `brew install pipx` (macOS) or `apt install pipx` (Linux).
 >
-> To install a different release tag, replace `@v1.0.0` in the command above.
+> To install a different release tag, replace `@v1.0.1` in the command above.
 > To install the latest development version instead, omit the `@<tag>` suffix.
 
 ### 2. Run it
@@ -62,8 +66,9 @@ replibook
 ```
 
 That's it. The interactive menu guides you through:
-- Selecting what to scan (everything is pre-selected)
+- Selecting what to scan, with a short explanation for each module
 - Confirming where to save the playbook (default: `./playbooks`)
+- Choosing whether the inventory should target the local machine or another host over SSH
 
 You end up with two files:
 
@@ -75,20 +80,19 @@ playbooks/
 
 ### 3. Apply it to another machine
 
-On the target machine, install Ansible once:
+Run the playbook from the machine where Replibook is installed:
 
 ```bash
-pip install ansible
-ansible-galaxy collection install community.docker community.general
+replibook apply myserver_playbook.yml --inventory inventory.ini
 ```
 
-Then run the playbook:
+If Ansible is missing, Replibook offers to install Ansible and the common collections it needs. You can also request that directly:
 
 ```bash
-ansible-playbook -i inventory.ini myserver_playbook.yml
+replibook apply myserver_playbook.yml --inventory inventory.ini --install-deps
 ```
 
-To target a different host, edit `inventory.ini` and replace `ansible_connection=local` with your SSH details.
+Replibook shows the selected playbook and inventory before handing off to `ansible-playbook`. If a playbook appears to contain network settings, Replibook asks for an extra confirmation because a bad network change can break remote access.
 
 ---
 
@@ -119,6 +123,19 @@ replibook --all
 # Custom output directory
 replibook --all --output /opt/playbooks
 
+# Generate an SSH inventory without the interactive wizard
+replibook --all \
+  --target-connection ssh \
+  --target-host 192.168.1.50 \
+  --target-user ubuntu \
+  --target-key ~/.ssh/id_rsa
+
+# Dry-run a generated playbook
+replibook apply ./playbooks/myserver_playbook.yml --inventory ./playbooks/inventory.ini --check
+
+# Apply and install missing Ansible dependencies if needed
+replibook apply ./playbooks/myserver_playbook.yml --inventory ./playbooks/inventory.ini --install-deps
+
 # Help
 replibook --help
 ```
@@ -131,17 +148,25 @@ Interactive run:
 
 ```
 ╭─────────────────────────────────────────────────────╮
-│  Replibook v1.0.0                                   │
+│  Replibook v1.0.1                                   │
 │  Ansible Playbook Generator · detected: macos       │
 ╰─────────────────────────────────────────────────────╯
 
-? Select scanner modules to run:
- ❯ ◉  Installed Packages (Homebrew)
-   ◉  Homebrew Services
-   ◉  Docker Containers & Images
-   ◉  Docker Compose Deployments
+Scan modules
+
+╭─ Installed Packages (Homebrew) ─────────────────────╮
+│ Reads Homebrew formulas and casks installed on this │
+│ Mac.                                                │
+╰─────────────────────────────────────────────────────╯
+? [ ] Include Installed Packages (Homebrew)? Yes
+
+╭─ Homebrew Services ─────────────────────────────────╮
+│ Reads services managed through brew services.       │
+╰─────────────────────────────────────────────────────╯
+? [ ] Include Homebrew Services? Yes
 
 ? Output directory for playbooks: ./playbooks
+? Generate inventory for another host over SSH? No
 
   Scanning...
   → Installed Packages (Homebrew)
