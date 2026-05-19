@@ -56,4 +56,4 @@ Replibook generates OS-specific tasks. A playbook generated on Debian/Ubuntu tar
 ## Version tags
 
 The repository uses semantic version tags. The initial public baseline is `v1.0.0`.
-
+The guided apply and target configuration release is `v1.0.1`.

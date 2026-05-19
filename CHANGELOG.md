@@ -4,6 +4,21 @@ All notable changes to Replibook are documented here.
 
 ---
 
+## [1.0.1] — 2026-05-19
+
+### Added
+- Guided scan wizard with per-module explanations instead of one dense multi-select list.
+- Local/SSH target inventory configuration, including host/IP, inventory name, SSH user, port, key path and become override.
+- `replibook apply` command that validates generated files, shows the selected playbook/inventory and then calls `ansible-playbook` after confirmation.
+- `replibook apply --install-deps` support to install Ansible and common required collections when missing.
+- Extra confirmation guard for network-sensitive playbooks, with `--confirm-network-changes` for non-interactive runs.
+
+### Changed
+- Interactive generation now asks for target inventory details before writing `inventory.ini`.
+- Documentation now explicitly states that Replibook does not back up Docker volumes, bind-mounted files, databases, uploads or application data.
+
+---
+
 ## [1.0.0] — 2026-05-18
 
 ### Added
