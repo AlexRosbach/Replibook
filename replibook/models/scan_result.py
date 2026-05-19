@@ -36,6 +36,34 @@ class ComposeDeployment:
 
 
 @dataclass
+class NetworkInterfaceInfo:
+    name: str
+    manager: str
+    addresses: list[str] = field(default_factory=list)
+    gateway4: str = ""
+    nameservers: list[str] = field(default_factory=list)
+    connection_name: str = ""
+    method: str = "manual"
+
+
+@dataclass
+class SystemConfigInfo:
+    hostname: str = ""
+    timezone: str = ""
+    locale: str = ""
+
+
+@dataclass
+class ScheduledTaskInfo:
+    name: str
+    source: str
+    schedule: str = ""
+    command: str = ""
+    user: str = ""
+    manager: str = "cron"
+
+
+@dataclass
 class ScanResult:
     hostname: str = field(default_factory=socket.gethostname)
     timestamp: datetime = field(default_factory=datetime.now)
@@ -44,3 +72,6 @@ class ScanResult:
     services: list = field(default_factory=list)
     containers: list = field(default_factory=list)
     deployments: list = field(default_factory=list)
+    network: list = field(default_factory=list)
+    system: list = field(default_factory=list)
+    scheduled_tasks: list = field(default_factory=list)

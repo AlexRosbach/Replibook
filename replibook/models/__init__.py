@@ -3,6 +3,9 @@ from replibook.models.scan_result import (
     ServiceInfo,
     ContainerInfo,
     ComposeDeployment,
+    NetworkInterfaceInfo,
+    SystemConfigInfo,
+    ScheduledTaskInfo,
     ScanResult,
 )
 
@@ -11,5 +14,8 @@ __all__ = [
     "ServiceInfo",
     "ContainerInfo",
     "ComposeDeployment",
+    "NetworkInterfaceInfo",
+    "SystemConfigInfo",
+    "ScheduledTaskInfo",
     "ScanResult",
 ]

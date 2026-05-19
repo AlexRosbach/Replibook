@@ -22,6 +22,7 @@ Replibook scans a running Linux or macOS machine and produces a working Ansible 
 - **macOS** — `Homebrew` formulas and casks, `brew services`
 
 Docker container and Docker Compose deployment scanning works identically on both platforms.
+System and network configuration scanning provide additional context for reproducing a host, with network changes guarded by review steps.
 
 For quick setup and common failure cases, also see the [Knowledge Base / FAQ](knowledgebase.md).
 
@@ -91,9 +92,10 @@ replibook
 ```
 
 You'll be prompted to:
-1. Select which modules to scan, with a short explanation for each module
-2. Confirm or change the output directory
-3. Decide whether the generated inventory targets this machine or another host over SSH
+1. Choose whether to scan this machine or apply an existing playbook
+2. Select which modules to scan, with a short explanation for each module
+3. Confirm or change the output directory
+4. Decide whether the generated inventory targets this machine or another host over SSH
 
 ### One-shot mode
 
@@ -152,6 +154,26 @@ If network-related configuration is detected, Replibook asks for a second confir
 ---
 
 ## Scanner Modules
+
+### System Configuration
+
+Reads hostname, timezone and locale. Generated playbooks include hostname/timezone tasks where supported and a locale review message.
+
+### Network Configuration
+
+**Linux:** Reads interface IPv4 addresses through `ip`, default gateway through `ip route`, DNS through `resolvectl` or `/etc/resolv.conf`, and NetworkManager connection details through `nmcli` when available.
+
+**macOS:** Reads network services, IP details, router and DNS through `networksetup`.
+
+Network output is intentionally conservative. Replibook records the discovered settings and emits disabled NetworkManager example tasks when enough data is available. Review interface names, IP addresses, gateways and DNS before enabling those tasks.
+
+### Scheduled Tasks
+
+**Linux:** Reads the current user's crontab, `/etc/crontab`, files in `/etc/cron.d`, and scripts in `/etc/cron.hourly`, `/etc/cron.daily`, `/etc/cron.weekly` and `/etc/cron.monthly`.
+
+**macOS:** Reads the current user's crontab plus plist names from user and system LaunchAgents/LaunchDaemons locations.
+
+Scheduled task output is generated as review-first content. Replibook records source, schedule, user and command where available; cron recreation tasks are disabled by default so paths, users, environment and secrets can be reviewed first.
 
 ### Packages
 
@@ -222,6 +244,7 @@ web01 ansible_host=192.168.1.50 ansible_user=ubuntu ansible_port=22 ansible_ssh_
     # ── Homebrew Casks ──      (macOS only)
     # ── Systemd Services ──    (Linux only)
     # ── Homebrew Services ──   (macOS only)
+    # ── Scheduled Tasks ──
     # ── Docker Containers ──
     # ── Docker Compose Deployments ──
 ```
@@ -279,11 +302,13 @@ replibook apply network_playbook.yml --inventory inventory.ini --yes --confirm-n
 
 ## Operational Boundaries
 
-- Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, Docker containers and Compose deployments.
+- Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, Docker containers, Compose deployments, system settings and network metadata.
 - Generated playbooks can include sensitive Docker environment variables. Review and replace secrets with Ansible Vault variables before sharing output.
 - Replibook does not back up Docker volumes, bind-mounted files, databases, uploads, application data or arbitrary files. Back up and restore data separately.
 - The `apply` command is a convenience wrapper around `ansible-playbook`; understanding and reviewing the generated playbook still matters.
 - Network-related playbooks require extra confirmation because they can interrupt SSH connectivity or remote access.
+- Generated network tasks are disabled examples where appropriate; enable them only after review.
+- Scheduled task recreation tasks are disabled examples where appropriate; review user context, paths and secrets before enabling them.
 - Linux package scanning currently targets apt/dpkg-based systems. RPM-based distributions are not supported yet.
 - macOS scanning targets Homebrew-managed packages and services. Launchd services outside Homebrew are not scanned.
 - Docker Compose discovery records project directories; it does not copy compose files, env files or application data.

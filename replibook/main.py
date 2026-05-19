@@ -140,6 +140,23 @@ def _resolve_scan_option(ctx: typer.Context, name: str, value: object) -> object
     return value
 
 
+def _has_explicit_scan_option(ctx: typer.Context) -> bool:
+    return any(
+        ctx.get_parameter_source(name) is not ParameterSource.DEFAULT
+        for name in (
+            "output",
+            "run_all",
+            "target_connection",
+            "target_name",
+            "target_host",
+            "target_user",
+            "target_port",
+            "target_identity_file",
+            "target_become",
+        )
+    )
+
+
 @app.callback()
 def default(
     ctx: typer.Context,
@@ -156,6 +173,12 @@ def default(
 ) -> None:
     if ctx.invoked_subcommand is not None:
         return
+    if not _has_explicit_scan_option(ctx):
+        from replibook.wizard import run_wizard
+
+        run_wizard(output=output)
+        return
+
     _run_scan(
         output=output,
         run_all=run_all,

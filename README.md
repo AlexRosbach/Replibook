@@ -25,6 +25,9 @@ Works on **Linux** (apt + systemd) and **macOS** (Homebrew). Auto-detects which 
 ## Features
 
 - Automatic OS detection for Linux and macOS
+- System configuration scanning for hostname, timezone and locale
+- Network configuration scanning for interfaces, addresses, gateway and DNS
+- Scheduled task scanning for cron, `/etc/cron.*` and macOS launchd plist locations
 - Package scanning for apt/dpkg and Homebrew
 - Service scanning for systemd and Homebrew services
 - Docker container scanning via the Docker SDK
@@ -66,6 +69,7 @@ replibook
 ```
 
 That's it. The interactive menu guides you through:
+- Choosing whether you want to scan or apply an existing playbook
 - Selecting what to scan, with a short explanation for each module
 - Confirming where to save the playbook (default: `./playbooks`)
 - Choosing whether the inventory should target the local machine or another host over SSH
@@ -102,12 +106,18 @@ Replibook detects your OS and picks the right tools automatically:
 
 | Module | Linux | macOS |
 |---|---|---|
+| **System** | hostname, timezone, locale | hostname, timezone, locale |
+| **Network** | `ip`, `resolvectl`, optional `nmcli` | `networksetup` |
+| **Scheduled Tasks** | user crontab, `/etc/crontab`, `/etc/cron.d`, periodic cron directories | user crontab, LaunchAgents, LaunchDaemons |
 | **Packages** | `apt-mark` / `dpkg` | `brew` formulas + casks |
 | **Services** | `systemctl` (enabled + active) | `brew services` |
 | **Docker** | Docker socket | Docker Desktop socket |
 | **Compose** | `/opt`, `/srv`, `/home`, `/root`, `/docker` | `/Users`, `/opt`, `/usr/local` |
 
 If a tool isn't present (e.g. no Docker, no Homebrew), that module just returns nothing — no errors.
+
+Network tasks are generated conservatively. Replibook records the discovered configuration and emits disabled NetworkManager example tasks when enough information is available. Review and explicitly enable network tasks before applying them.
+Scheduled tasks are also generated conservatively. Replibook records cron and launchd entries for review, and cron recreation tasks are disabled until you explicitly enable them.
 
 ---
 

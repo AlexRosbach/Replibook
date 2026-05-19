@@ -9,6 +9,9 @@ from replibook.scanner import (
     ServiceScanner,
     DockerScanner,
     DeploymentScanner,
+    NetworkScanner,
+    SystemScanner,
+    ScheduledTaskScanner,
 )
 from replibook.generator.playbook import PlaybookGenerator, TargetConfig
 from replibook.utils import detect_os
@@ -20,6 +23,11 @@ console = Console()
 def _module_labels(host_os: str) -> dict:
     if host_os == "macos":
         return {
+            "system": (
+                "System Configuration",
+                "Reads hostname, timezone and locale as a baseline for the target host.",
+                SystemScanner,
+            ),
             "packages": (
                 "Installed Packages (Homebrew)",
                 "Reads Homebrew formulas and casks installed on this Mac.",
@@ -29,6 +37,11 @@ def _module_labels(host_os: str) -> dict:
                 "Homebrew Services",
                 "Reads services managed through brew services.",
                 ServiceScanner,
+            ),
+            "scheduled_tasks": (
+                "Scheduled Tasks",
+                "Reads user cron entries and LaunchAgents/LaunchDaemons as reviewable scheduled tasks.",
+                ScheduledTaskScanner,
             ),
             "docker": (
                 "Docker Containers & Images",
@@ -40,8 +53,18 @@ def _module_labels(host_os: str) -> dict:
                 "Searches common folders for Compose files and adds deployment tasks.",
                 DeploymentScanner,
             ),
+            "network": (
+                "Network Configuration",
+                "Reads IP addresses, router and DNS details from macOS network services.",
+                NetworkScanner,
+            ),
         }
     return {
+        "system": (
+            "System Configuration",
+            "Reads hostname, timezone and locale as a baseline for the target host.",
+            SystemScanner,
+        ),
         "packages": (
             "Installed Packages (apt/dpkg)",
             "Reads manually installed apt/dpkg packages and creates apt tasks.",
@@ -52,6 +75,11 @@ def _module_labels(host_os: str) -> dict:
             "Reads enabled and active systemd services and creates service tasks.",
             ServiceScanner,
         ),
+        "scheduled_tasks": (
+            "Scheduled Tasks",
+            "Reads user crontab, /etc/crontab, /etc/cron.d and periodic cron directories.",
+            ScheduledTaskScanner,
+        ),
         "docker": (
             "Docker Containers & Images",
             "Reads local Docker containers, images, ports, volumes and environment values.",
@@ -61,6 +89,11 @@ def _module_labels(host_os: str) -> dict:
             "Docker Compose Deployments",
             "Searches common folders for Compose files and adds deployment tasks.",
             DeploymentScanner,
+        ),
+        "network": (
+            "Network Configuration",
+            "Reads interface addresses, default gateway, DNS and NetworkManager details when available.",
+            NetworkScanner,
         ),
     }
 
@@ -221,10 +254,13 @@ def run(
         scan_results[key] = ScannerClass().scan()
 
     counts = {
+        "system": len(scan_results.get("system", [])),
         "packages": len(scan_results.get("packages", [])),
         "services": len(scan_results.get("services", [])),
+        "scheduled_tasks": len(scan_results.get("scheduled_tasks", [])),
         "docker": len(scan_results.get("docker", [])),
         "deployments": len(scan_results.get("deployments", [])),
+        "network": len(scan_results.get("network", [])),
     }
 
     console.print()

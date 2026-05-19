@@ -71,6 +71,8 @@ class PlaybookGenerator:
             timestamp=timestamp,
             host_os=host_os,
             use_become=use_become,
+            system_configs=self.scan_results.get("system", []),
+            scheduled_tasks=self.scan_results.get("scheduled_tasks", []),
             apt_packages=[p for p in packages if p.manager == "apt"],
             brew_packages=[p for p in packages if p.manager == "homebrew"],
             cask_packages=[p for p in packages if p.manager == "homebrew_cask"],
@@ -78,6 +80,7 @@ class PlaybookGenerator:
             brew_services=[s for s in services if s.manager == "homebrew"],
             containers=self.scan_results.get("docker", []),
             deployments=self.scan_results.get("deployments", []),
+            network_interfaces=self.scan_results.get("network", []),
         )
 
         playbook_file = self.output_dir / f"{hostname}_playbook.yml"

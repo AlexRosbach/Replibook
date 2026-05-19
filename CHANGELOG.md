@@ -4,6 +4,18 @@ All notable changes to Replibook are documented here.
 
 ---
 
+## Unreleased
+
+### Added
+- Startup wizard that asks whether to scan or apply when `replibook` is run without explicit command-line options.
+- Network scanner for interface addresses, default gateway, DNS and NetworkManager connection details where available.
+- System configuration scanner for hostname, timezone and locale.
+- Scheduled task scanner for cron, `/etc/cron.*` and macOS launchd plist locations.
+- Generated playbooks now include reviewed network and system configuration sections.
+- Generated playbooks now include reviewed scheduled task sections, with cron recreation tasks disabled by default.
+
+---
+
 ## [1.0.1] — 2026-05-19
 
 ### Added
