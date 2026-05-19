@@ -88,6 +88,8 @@ def _has_network_sensitive_content(value: object, parent_key: str | None = None)
 
     parent_key tracks the containing mapping key so env/environment blocks can be ignored
     and path-like values can be checked only for relevant YAML keys such as dest/path/src.
+    Returns True when the YAML contains network-related modules, mapping keys, scalar
+    values, or file paths that could affect host network connectivity.
     """
     if isinstance(value, dict):
         for key, item in value.items():

@@ -129,7 +129,7 @@ def _version_option() -> bool:
 
 
 def _resolve_scan_option(ctx: typer.Context, name: str, value: object) -> object:
-    """Return the scan-level value when set, otherwise inherit an explicit parent callback value."""
+    """Return an explicitly provided scan value, else inherit an explicitly provided parent callback value."""
     if ctx.get_parameter_source(name) is not ParameterSource.DEFAULT:
         return value
 
