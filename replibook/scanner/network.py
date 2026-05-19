@@ -7,8 +7,11 @@ from replibook.utils import detect_os, has_command
 
 class NetworkScanner(BaseScanner):
     def scan(self) -> list[NetworkInterfaceInfo]:
-        if detect_os() == "macos":
+        os_name = detect_os()
+        if os_name == "macos":
             return self._scan_macos()
+        if os_name == "windows":
+            return self._scan_windows()
         return self._scan_linux()
 
     def _scan_linux(self) -> list[NetworkInterfaceInfo]:
@@ -93,6 +96,35 @@ class NetworkScanner(BaseScanner):
 
         return sorted(services, key=lambda item: item.name)
 
+    def _scan_windows(self) -> list[NetworkInterfaceInfo]:
+        if not has_command("powershell"):
+            return []
+
+        script = r"""
+Get-NetIPConfiguration |
+  Select-Object InterfaceAlias, InterfaceDescription, IPv4Address, IPv4DefaultGateway, DNSServer |
+  ConvertTo-Json -Depth 5
+"""
+        output = self._run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
+        interfaces = []
+        for item in self._json_list(output):
+            name = str(item.get("InterfaceAlias", "")).strip()
+            if not name:
+                continue
+            addresses = self._windows_ipv4_addresses(item.get("IPv4Address"))
+            gateway = self._windows_gateway(item.get("IPv4DefaultGateway"))
+            nameservers = self._windows_nameservers(item.get("DNSServer"))
+            interfaces.append(NetworkInterfaceInfo(
+                name=name,
+                manager="powershell",
+                addresses=addresses,
+                gateway4=gateway,
+                nameservers=nameservers,
+                connection_name=str(item.get("InterfaceDescription", "") or ""),
+                method="review",
+            ))
+        return sorted(interfaces, key=lambda item: item.name)
+
     def _ip_addr_json(self) -> list[dict]:
         output = self._run(["ip", "-j", "addr", "show"])
         if not output:
@@ -154,3 +186,39 @@ class NetworkScanner(BaseScanner):
 
     def _split_nmcli_values(self, value: str) -> list[str]:
         return [item.strip() for item in value.replace(",", ";").split(";") if item.strip()]
+
+    def _json_list(self, output: str) -> list[dict]:
+        if not output:
+            return []
+        try:
+            data = json.loads(output)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(data, dict):
+            return [data]
+        return data if isinstance(data, list) else []
+
+    def _windows_ipv4_addresses(self, value: object) -> list[str]:
+        items = value if isinstance(value, list) else [value]
+        addresses = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            address = item.get("IPAddress")
+            prefix = item.get("PrefixLength")
+            if address and prefix is not None:
+                addresses.append(f"{address}/{prefix}")
+        return addresses
+
+    def _windows_gateway(self, value: object) -> str:
+        items = value if isinstance(value, list) else [value]
+        for item in items:
+            if isinstance(item, dict) and item.get("NextHop"):
+                return str(item["NextHop"])
+        return ""
+
+    def _windows_nameservers(self, value: object) -> list[str]:
+        if not isinstance(value, dict):
+            return []
+        servers = value.get("ServerAddresses") or []
+        return [str(server) for server in servers if server]

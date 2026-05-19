@@ -1,3 +1,5 @@
+import json
+
 from replibook.scanner.base import BaseScanner
 from replibook.models.scan_result import PackageInfo
 from replibook.utils import detect_os, has_command
@@ -8,6 +10,8 @@ class PackageScanner(BaseScanner):
         os_name = detect_os()
         if os_name == "macos":
             return self._scan_macos()
+        if os_name == "windows":
+            return self._scan_windows()
         return self._scan_linux()
 
     # ── Linux (apt / dpkg) ────────────────────────────────────────────────
@@ -73,3 +77,44 @@ class PackageScanner(BaseScanner):
                 packages.append(PackageInfo(name=name, version="", manager="homebrew_cask"))
 
         return sorted(packages, key=lambda p: (p.manager, p.name))
+
+    # ── Windows (installed-program registry inventory) ────────────────────
+
+    def _scan_windows(self) -> list[PackageInfo]:
+        if not has_command("powershell"):
+            return []
+
+        script = r"""
+$paths = @(
+  'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+  'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+  'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+)
+Get-ItemProperty $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName } |
+  Select-Object DisplayName, DisplayVersion |
+  Sort-Object DisplayName -Unique |
+  ConvertTo-Json -Depth 3
+"""
+        output = self._run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
+        items = self._json_list(output)
+        return [
+            PackageInfo(
+                name=str(item.get("DisplayName", "")).strip(),
+                version=str(item.get("DisplayVersion", "") or "").strip(),
+                manager="windows_registry",
+            )
+            for item in items
+            if str(item.get("DisplayName", "")).strip()
+        ]
+
+    def _json_list(self, output: str) -> list[dict]:
+        if not output:
+            return []
+        try:
+            data = json.loads(output)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(data, dict):
+            return [data]
+        return data if isinstance(data, list) else []

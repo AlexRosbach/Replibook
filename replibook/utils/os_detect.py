@@ -9,6 +9,8 @@ def detect_os() -> str:
         return "linux"
     if system == "Darwin":
         return "macos"
+    if system == "Windows":
+        return "windows"
     return "unknown"
 
 

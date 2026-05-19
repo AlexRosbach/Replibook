@@ -6,7 +6,7 @@
   hosts: replibook
   become: {{ "true" if use_become else "false" }}
   tasks:
-{% set has_any = system_configs or apt_packages or brew_packages or cask_packages or systemd_services or brew_services or scheduled_tasks or containers or deployments or network_interfaces %}
+{% set has_any = system_configs or apt_packages or brew_packages or cask_packages or windows_packages or systemd_services or brew_services or windows_services or scheduled_tasks or containers or deployments or network_interfaces %}
 {% if not has_any %}
     - name: Replibook scan returned no results
       ansible.builtin.debug:
@@ -16,6 +16,20 @@
 {% if system_configs %}
     # ── System Configuration ──────────────────────────────────────────────────
 {% for syscfg in system_configs %}
+{% if host_os == "windows" %}
+    - name: Review Windows system configuration
+      ansible.builtin.debug:
+        msg:
+          hostname: {{ syscfg.hostname | tojson }}
+          timezone: {{ syscfg.timezone | tojson }}
+          locale: {{ syscfg.locale | tojson }}
+
+    - name: Configure Windows hostname
+      ansible.windows.win_hostname:
+        name: {{ syscfg.hostname | tojson }}
+      when: false  # Enable only after confirming the target reboot window.
+
+{% else %}
     - name: Set hostname
       ansible.builtin.hostname:
         name: {{ syscfg.hostname | tojson }}
@@ -32,6 +46,7 @@
         msg: "Source locale was {{ syscfg.locale }}"
       when: {{ "true" if syscfg.locale else "false" }}
 
+{% endif %}
 {% endfor %}
 {% endif %}
 
@@ -70,6 +85,21 @@
         state: present
 
 {% endif %}
+{% if windows_packages %}
+    # ── Windows Installed Programs ────────────────────────────────────────────
+    # Windows registry inventory is review output. Many programs do not expose
+    # a safe unattended installer command, so Replibook preserves the facts
+    # instead of generating fragile install tasks.
+{% for pkg in windows_packages %}
+    - name: Review Windows program {{ pkg.name | tojson }}
+      ansible.builtin.debug:
+        msg:
+          name: {{ pkg.name | tojson }}
+          version: {{ pkg.version | tojson }}
+          source: {{ pkg.manager | tojson }}
+
+{% endfor %}
+{% endif %}
 {% if systemd_services %}
     # ── Systemd Services ──────────────────────────────────────────────────────
 {% for svc in systemd_services %}
@@ -88,6 +118,25 @@
       community.general.homebrew_services:
         name: {{ svc.name | tojson }}
         state: {{ svc.state }}
+
+{% endfor %}
+{% endif %}
+{% if windows_services %}
+    # ── Windows Services ──────────────────────────────────────────────────────
+{% for svc in windows_services %}
+    - name: Review Windows service {{ svc.name | tojson }}
+      ansible.builtin.debug:
+        msg:
+          name: {{ svc.name | tojson }}
+          state: {{ svc.state | tojson }}
+          enabled: {{ svc.enabled | tojson }}
+
+    - name: Configure Windows service {{ svc.name | tojson }}
+      ansible.windows.win_service:
+        name: {{ svc.name | tojson }}
+        state: {{ svc.state }}
+        start_mode: {{ "auto" if svc.enabled else "manual" }}
+      when: false  # Enable only after confirming service impact on Windows.
 
 {% endfor %}
 {% endif %}

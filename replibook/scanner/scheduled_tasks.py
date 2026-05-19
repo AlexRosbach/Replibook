@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from replibook.models.scan_result import ScheduledTaskInfo
@@ -10,8 +11,11 @@ CRON_PARTS = {"@reboot", "@hourly", "@daily", "@weekly", "@monthly", "@yearly", 
 
 class ScheduledTaskScanner(BaseScanner):
     def scan(self) -> list[ScheduledTaskInfo]:
-        if detect_os() == "macos":
+        os_name = detect_os()
+        if os_name == "macos":
             return self._scan_macos()
+        if os_name == "windows":
+            return self._scan_windows()
         return self._scan_linux()
 
     def _scan_linux(self) -> list[ScheduledTaskInfo]:
@@ -39,6 +43,32 @@ class ScheduledTaskScanner(BaseScanner):
                     manager="launchd",
                     command=f"Review launchd plist: {item}",
                 ))
+        return tasks
+
+    def _scan_windows(self) -> list[ScheduledTaskInfo]:
+        if not has_command("powershell"):
+            return []
+
+        script = r"""
+Get-ScheduledTask |
+  Where-Object { $_.TaskPath -notlike '\Microsoft\Windows\*' } |
+  Select-Object TaskName, TaskPath, State |
+  Sort-Object TaskPath, TaskName |
+  ConvertTo-Json -Depth 3
+"""
+        output = self._run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
+        tasks = []
+        for item in self._json_list(output):
+            name = str(item.get("TaskName", "")).strip()
+            path = str(item.get("TaskPath", "") or "").strip()
+            if not name:
+                continue
+            tasks.append(ScheduledTaskInfo(
+                name=name,
+                source=f"Task Scheduler: {path}",
+                command=f"Review Windows scheduled task state: {item.get('State', '')}",
+                manager="windows_task_scheduler",
+            ))
         return tasks
 
     def _scan_user_crontab(self) -> list[ScheduledTaskInfo]:
@@ -117,3 +147,14 @@ class ScheduledTaskScanner(BaseScanner):
         if system_crontab:
             return schedule, parts[5], " ".join(parts[6:])
         return schedule, "", " ".join(parts[5:])
+
+    def _json_list(self, output: str) -> list[dict]:
+        if not output:
+            return []
+        try:
+            data = json.loads(output)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(data, dict):
+            return [data]
+        return data if isinstance(data, list) else []

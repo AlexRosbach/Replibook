@@ -4,7 +4,7 @@ from replibook.version import __version__
 
 app = typer.Typer(
     name="replibook",
-    help="Scan a Linux or macOS host and generate an Ansible playbook.",
+    help="Scan a Linux, macOS or Windows host and generate an Ansible playbook.",
     add_completion=False,
     invoke_without_command=True,
 )
@@ -19,6 +19,7 @@ def _version_callback(value: bool) -> None:
 def _run_scan(
     output: str,
     run_all: bool,
+    modules: str | None,
     target_connection: str,
     target_name: str | None,
     target_host: str | None,
@@ -33,6 +34,7 @@ def _run_scan(
         run(
             output=output,
             run_all=run_all,
+            selected_modules=_parse_modules(modules),
             target_connection=target_connection,
             target_name=target_name,
             target_host=target_host,
@@ -59,6 +61,14 @@ def _run_all_option() -> bool:
         False,
         "--all", "-a",
         help="Run all scanner modules without interactive selection",
+    )
+
+
+def _modules_option() -> str | None:
+    return typer.Option(
+        None,
+        "--modules",
+        help="Comma-separated scanner keys to run non-interactively, e.g. system,network,scheduled_tasks",
     )
 
 
@@ -128,6 +138,12 @@ def _version_option() -> bool:
     )
 
 
+def _parse_modules(value: str | None) -> list[str] | None:
+    if not value:
+        return None
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def _resolve_scan_option(ctx: typer.Context, name: str, value: object) -> object:
     """Return an explicitly provided scan value, else inherit an explicitly provided parent callback value."""
     if ctx.get_parameter_source(name) is not ParameterSource.DEFAULT:
@@ -146,6 +162,7 @@ def _has_explicit_scan_option(ctx: typer.Context) -> bool:
         for name in (
             "output",
             "run_all",
+            "modules",
             "target_connection",
             "target_name",
             "target_host",
@@ -162,6 +179,7 @@ def default(
     ctx: typer.Context,
     output: str = _output_option(),
     run_all: bool = _run_all_option(),
+    modules: str | None = _modules_option(),
     target_connection: str = _target_connection_option(),
     target_name: str | None = _target_name_option(),
     target_host: str | None = _target_host_option(),
@@ -182,6 +200,7 @@ def default(
     _run_scan(
         output=output,
         run_all=run_all,
+        modules=modules,
         target_connection=target_connection,
         target_name=target_name,
         target_host=target_host,
@@ -197,6 +216,7 @@ def scan(
     ctx: typer.Context,
     output: str = _output_option(),
     run_all: bool = _run_all_option(),
+    modules: str | None = _modules_option(),
     target_connection: str = _target_connection_option(),
     target_name: str | None = _target_name_option(),
     target_host: str | None = _target_host_option(),
@@ -211,6 +231,7 @@ def scan(
         for name, value in (
             ("output", output),
             ("run_all", run_all),
+            ("modules", modules),
             ("target_connection", target_connection),
             ("target_name", target_name),
             ("target_host", target_host),
@@ -224,6 +245,7 @@ def scan(
     _run_scan(
         output=resolved["output"],
         run_all=resolved["run_all"],
+        modules=resolved["modules"],
         target_connection=resolved["target_connection"],
         target_name=resolved["target_name"],
         target_host=resolved["target_host"],
@@ -232,6 +254,26 @@ def scan(
         target_identity_file=resolved["target_identity_file"],
         target_become=resolved["target_become"],
     )
+
+
+@app.command()
+def modules() -> None:
+    """List scanner keys available on this platform."""
+    from replibook.modules import module_labels
+    from replibook.utils import detect_os
+
+    host_os = detect_os()
+    typer.echo(f"Detected backend: {host_os}")
+    for key, (label, description, _) in module_labels(host_os).items():
+        typer.echo(f"{key}\t{label}\t{description}")
+
+
+@app.command()
+def gui() -> None:
+    """Start the Replibook desktop app."""
+    from replibook.gui.app import main as gui_main
+
+    gui_main()
 
 
 @app.command()

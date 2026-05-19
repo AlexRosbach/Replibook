@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" width="520" height="140">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&amp;family=Space+Grotesk:wght@700&amp;display=swap');
+    </style>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22D3EE;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0EA5E9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F172A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E293B;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background pill -->
+  <rect x="0" y="0" width="520" height="140" rx="16" fill="url(#bgGrad)"/>
+
+  <!-- ── Icon Mark ── -->
+  <!-- Shadow / back page -->
+  <rect x="22" y="30" width="72" height="88" rx="7" fill="#0E7490" opacity="0.5"/>
+  <!-- Back page -->
+  <rect x="16" y="22" width="72" height="88" rx="7" fill="#155E75"/>
+  <!-- Code lines on back page -->
+  <rect x="27" y="36" width="38" height="3.5" rx="1.75" fill="#67E8F9" opacity="0.35"/>
+  <rect x="27" y="44" width="50" height="3.5" rx="1.75" fill="#67E8F9" opacity="0.25"/>
+  <rect x="27" y="52" width="30" height="3.5" rx="1.75" fill="#67E8F9" opacity="0.35"/>
+
+  <!-- Front page (main) -->
+  <rect x="30" y="14" width="72" height="88" rx="7" fill="url(#iconGrad)" filter="url(#glow)"/>
+
+  <!-- Code lines on front page – representing the playbook -->
+  <rect x="41" y="30" width="20" height="3.5" rx="1.75" fill="#0F172A" opacity="0.7"/>
+  <rect x="65" y="30" width="26" height="3.5" rx="1.75" fill="#0F172A" opacity="0.4"/>
+
+  <rect x="41" y="40" width="48" height="3.5" rx="1.75" fill="#0F172A" opacity="0.55"/>
+
+  <rect x="41" y="50" width="14" height="3.5" rx="1.75" fill="#0F172A" opacity="0.7"/>
+  <rect x="59" y="50" width="30" height="3.5" rx="1.75" fill="#0F172A" opacity="0.4"/>
+
+  <rect x="41" y="60" width="42" height="3.5" rx="1.75" fill="#0F172A" opacity="0.55"/>
+
+  <rect x="41" y="70" width="22" height="3.5" rx="1.75" fill="#0F172A" opacity="0.7"/>
+  <rect x="67" y="70" width="18" height="3.5" rx="1.75" fill="#0F172A" opacity="0.4"/>
+
+  <rect x="41" y="80" width="36" height="3.5" rx="1.75" fill="#0F172A" opacity="0.55"/>
+
+  <!-- Scan line overlay suggesting "scanning" -->
+  <line x1="30" y1="88" x2="102" y2="88" stroke="#F0F9FF" stroke-width="1.5" opacity="0.25" stroke-dasharray="4 3"/>
+
+  <!-- Reproduce arrow (bottom-right of front page) -->
+  <g transform="translate(86, 88)" fill="none">
+    <circle cx="11" cy="12" r="10" fill="#0F172A" opacity="0.8"/>
+    <!-- right-pointing arrow -->
+    <polyline points="7,12 15,12" stroke="#22D3EE" stroke-width="2" stroke-linecap="round"/>
+    <polyline points="12,9 15,12 12,15" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- ── Wordmark ── -->
+  <!-- "Repli" in white, "book" in cyan -->
+  <text
+    x="126"
+    y="90"
+    font-family="'Space Grotesk', 'DM Sans', 'Trebuchet MS', sans-serif"
+    font-size="52"
+    font-weight="700"
+    letter-spacing="-1"
+    fill="#F1F5F9"
+  >Repli</text>
+  <text
+    x="283"
+    y="90"
+    font-family="'Space Grotesk', 'DM Sans', 'Trebuchet MS', sans-serif"
+    font-size="52"
+    font-weight="700"
+    letter-spacing="-1"
+    fill="#22D3EE"
+  >book</text>
+
+  <!-- Tagline -->
+  <text
+    x="127"
+    y="114"
+    font-family="'DM Mono', 'Courier New', monospace"
+    font-size="13"
+    letter-spacing="1.5"
+    fill="#475569"
+  >SCAN · GENERATE · REPRODUCE</text>
+
+</svg>

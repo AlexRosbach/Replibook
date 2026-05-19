@@ -21,6 +21,9 @@ class SystemScanner(BaseScanner):
             if ":" in output:
                 return output.split(":", 1)[1].strip()
 
+        if detect_os() == "windows" and has_command("tzutil"):
+            return self._run(["tzutil", "/g"]).strip()
+
         if has_command("timedatectl"):
             output = self._run(["timedatectl", "show", "-p", "Timezone", "--value"])
             if output:
@@ -36,4 +39,12 @@ class SystemScanner(BaseScanner):
         for line in output.splitlines():
             if line.startswith("LANG="):
                 return line.split("=", 1)[1].strip().strip('"')
+
+        if detect_os() == "windows" and has_command("powershell"):
+            output = self._run([
+                "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-Command", "(Get-Culture).Name",
+            ])
+            if output:
+                return output.strip()
         return ""

@@ -6,11 +6,12 @@
 2. [Requirements](#requirements)
 3. [Installation](#installation)
 4. [Usage](#usage)
-5. [Scanner Modules](#scanner-modules)
-6. [Generated Output](#generated-output)
-7. [Applying the Playbook](#applying-the-playbook)
-8. [Operational Boundaries](#operational-boundaries)
-9. [Troubleshooting](#troubleshooting)
+5. [Windows Desktop App](#windows-desktop-app)
+6. [Scanner Modules](#scanner-modules)
+7. [Generated Output](#generated-output)
+8. [Applying the Playbook](#applying-the-playbook)
+9. [Operational Boundaries](#operational-boundaries)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -30,10 +31,11 @@ For quick setup and common failure cases, also see the [Knowledge Base / FAQ](kn
 
 ## Requirements
 
-- **OS**: Linux (Debian/Ubuntu) or macOS
+- **OS**: Linux (Debian/Ubuntu), macOS or Windows
 - **Python**: 3.10 or higher
 - **Optional**: Docker daemon (for container scanning)
 - **Optional**: Homebrew (macOS only, for package/service scanning)
+- **Optional on Windows app**: WSL or another Ansible-capable command for applying playbooks
 
 ---
 
@@ -79,6 +81,20 @@ cd Replibook
 pip install -e .
 ```
 
+### Windows executable
+
+`Replibook.exe` is built by the `Build Windows Desktop App` GitHub Actions workflow and published as a workflow artifact. Release builds can attach the same artifact to the GitHub release assets.
+
+To build it manually on Windows:
+
+```powershell
+git clone https://github.com/AlexRosbach/Replibook.git
+cd Replibook
+.\scripts\build-windows.ps1
+```
+
+The output is written to `dist\Replibook.exe`.
+
 ---
 
 ## Usage
@@ -122,6 +138,7 @@ replibook --all \
 |---|---|---|---|
 | `--output` | `-o` | `./playbooks` | Directory where playbooks are written |
 | `--all` | `-a` | `false` | Skip menu, run all modules |
+| `--modules` | | | Comma-separated scanner keys for automation, e.g. `system,network,scheduled_tasks` |
 | `--target-connection` | | `local` | Inventory connection type: `local` or `ssh` |
 | `--target-name` | | | Inventory host name |
 | `--target-host` | | | Target IP address or hostname for SSH inventory |
@@ -131,6 +148,27 @@ replibook --all \
 | `--target-become` / `--no-target-become` | | OS default | Override sudo/become usage in the generated playbook |
 | `--version` | | | Print version and exit |
 | `--help` | | | Show help and exit |
+
+### Commander / automation usage
+
+Every major workflow exposed by the desktop app is also reachable from the command line:
+
+```bash
+# List scanner module keys for this platform
+replibook modules
+
+# Run only selected scanner modules
+replibook scan --modules system,network,scheduled_tasks --output ./playbooks
+
+# Run all scanners without prompts
+replibook scan --all --output ./playbooks
+
+# Launch the desktop app from a shell or automation launcher
+replibook gui
+
+# Apply from automation
+replibook apply ./playbooks/myhost_playbook.yml --inventory ./playbooks/inventory.ini --check --yes
+```
 
 ### Apply command
 
@@ -151,6 +189,22 @@ The `apply` command does not hide Ansible. It validates the selected files, offe
 
 If network-related configuration is detected, Replibook asks for a second confirmation before applying changes. In non-interactive runs, network-sensitive playbooks require `--confirm-network-changes`; otherwise Replibook refuses to apply them.
 
+## Windows Desktop App
+
+The Windows app is a thin frontend over the same Replibook scanner, generator and apply workflow. It is meant for operators who want a clickable tool without replacing the backend.
+
+What it does:
+- creates playbook and inventory files through the shared generator backend
+- runs native Windows scans for system, installed programs, services, network settings, Docker, Compose files and scheduled tasks
+- exposes target inventory settings for local and SSH targets
+- applies generated playbooks by calling an Ansible command
+- defaults to `wsl ansible-playbook` on Windows, but accepts a custom command
+- blocks network-sensitive playbooks unless the user explicitly enables network confirmation
+
+Important limitation:
+
+Windows inventory differs from Linux/macOS inventory. Replibook records Windows programs and some scheduler details as review-first facts when there is no safe, generic Ansible install task. That keeps the information visible without generating fragile automation.
+
 ---
 
 ## Scanner Modules
@@ -165,6 +219,8 @@ Reads hostname, timezone and locale. Generated playbooks include hostname/timezo
 
 **macOS:** Reads network services, IP details, router and DNS through `networksetup`.
 
+**Windows:** Reads interface aliases, IPv4 addresses, gateways and DNS servers through `Get-NetIPConfiguration`.
+
 Network output is intentionally conservative. Replibook records the discovered settings and emits disabled NetworkManager example tasks when enough data is available. Review interface names, IP addresses, gateways and DNS before enabling those tasks.
 
 ### Scheduled Tasks
@@ -172,6 +228,8 @@ Network output is intentionally conservative. Replibook records the discovered s
 **Linux:** Reads the current user's crontab, `/etc/crontab`, files in `/etc/cron.d`, and scripts in `/etc/cron.hourly`, `/etc/cron.daily`, `/etc/cron.weekly` and `/etc/cron.monthly`.
 
 **macOS:** Reads the current user's crontab plus plist names from user and system LaunchAgents/LaunchDaemons locations.
+
+**Windows:** Reads non-Microsoft Windows Task Scheduler entries for review. Replibook does not try to recreate arbitrary scheduled tasks automatically because triggers, principals and credentials need operator review.
 
 Scheduled task output is generated as review-first content. Replibook records source, schedule, user and command where available; cron recreation tasks are disabled by default so paths, users, environment and secrets can be reviewed first.
 
@@ -181,11 +239,15 @@ Scheduled task output is generated as review-first content. Replibook records so
 
 **macOS:** Reads `brew list --installed-on-request --formula` (formulas) and `brew list --cask` (apps). Generates `community.general.homebrew` and `community.general.homebrew_cask` tasks.
 
+**Windows:** Reads installed programs from the Windows uninstall registry. These entries are emitted as review facts because many installers do not expose a safe unattended install command.
+
 ### Services
 
 **Linux:** Reads `systemctl list-unit-files --state=enabled` (enabled services) and `list-units --state=active` (currently running). Kernel/transient units are filtered. Generates `ansible.builtin.service` tasks.
 
 **macOS:** Reads `brew services list` to find Homebrew-managed services. Generates `community.general.homebrew_services` tasks. (Launchd-only services outside Homebrew are not scanned.)
+
+**Windows:** Reads running or automatically started services through PowerShell. Generated `ansible.windows.win_service` tasks are disabled by default until service impact is reviewed.
 
 ### Docker Containers
 

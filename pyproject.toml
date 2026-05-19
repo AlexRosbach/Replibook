@@ -19,6 +19,7 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -37,6 +38,7 @@ dependencies = [
 
 [project.scripts]
 replibook = "replibook.main:main"
+replibook-gui = "replibook.gui.app:main"
 
 [project.urls]
 Homepage = "https://github.com/AlexRosbach/Replibook"
@@ -47,4 +49,4 @@ Issues = "https://github.com/AlexRosbach/Replibook/issues"
 include = ["replibook*"]
 
 [tool.setuptools.package-data]
-replibook = ["generator/templates/*.j2"]
+replibook = ["generator/templates/*.j2", "assets/*"]

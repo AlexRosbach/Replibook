@@ -4,98 +4,13 @@ import questionary
 from rich.console import Console
 from rich.panel import Panel
 
-from replibook.scanner import (
-    PackageScanner,
-    ServiceScanner,
-    DockerScanner,
-    DeploymentScanner,
-    NetworkScanner,
-    SystemScanner,
-    ScheduledTaskScanner,
-)
 from replibook.generator.playbook import PlaybookGenerator, TargetConfig
+from replibook.modules import module_labels
+from replibook.runtime import scan_selected_modules
 from replibook.utils import detect_os
 from replibook.version import __version__
 
 console = Console()
-
-
-def _module_labels(host_os: str) -> dict:
-    if host_os == "macos":
-        return {
-            "system": (
-                "System Configuration",
-                "Reads hostname, timezone and locale as a baseline for the target host.",
-                SystemScanner,
-            ),
-            "packages": (
-                "Installed Packages (Homebrew)",
-                "Reads Homebrew formulas and casks installed on this Mac.",
-                PackageScanner,
-            ),
-            "services": (
-                "Homebrew Services",
-                "Reads services managed through brew services.",
-                ServiceScanner,
-            ),
-            "scheduled_tasks": (
-                "Scheduled Tasks",
-                "Reads user cron entries and LaunchAgents/LaunchDaemons as reviewable scheduled tasks.",
-                ScheduledTaskScanner,
-            ),
-            "docker": (
-                "Docker Containers & Images",
-                "Reads local Docker containers, images, ports, volumes and environment values.",
-                DockerScanner,
-            ),
-            "deployments": (
-                "Docker Compose Deployments",
-                "Searches common folders for Compose files and adds deployment tasks.",
-                DeploymentScanner,
-            ),
-            "network": (
-                "Network Configuration",
-                "Reads IP addresses, router and DNS details from macOS network services.",
-                NetworkScanner,
-            ),
-        }
-    return {
-        "system": (
-            "System Configuration",
-            "Reads hostname, timezone and locale as a baseline for the target host.",
-            SystemScanner,
-        ),
-        "packages": (
-            "Installed Packages (apt/dpkg)",
-            "Reads manually installed apt/dpkg packages and creates apt tasks.",
-            PackageScanner,
-        ),
-        "services": (
-            "Systemd Services",
-            "Reads enabled and active systemd services and creates service tasks.",
-            ServiceScanner,
-        ),
-        "scheduled_tasks": (
-            "Scheduled Tasks",
-            "Reads user crontab, /etc/crontab, /etc/cron.d and periodic cron directories.",
-            ScheduledTaskScanner,
-        ),
-        "docker": (
-            "Docker Containers & Images",
-            "Reads local Docker containers, images, ports, volumes and environment values.",
-            DockerScanner,
-        ),
-        "deployments": (
-            "Docker Compose Deployments",
-            "Searches common folders for Compose files and adds deployment tasks.",
-            DeploymentScanner,
-        ),
-        "network": (
-            "Network Configuration",
-            "Reads interface addresses, default gateway, DNS and NetworkManager details when available.",
-            NetworkScanner,
-        ),
-    }
 
 
 def _ask_bool(message: str, default: bool) -> bool:
@@ -203,6 +118,7 @@ def _configure_target(host_os: str) -> tuple[TargetConfig | None, bool | None]:
 def run(
     output: str,
     run_all: bool = False,
+    selected_modules: list[str] | None = None,
     target_connection: str = "local",
     target_name: str | None = None,
     target_host: str | None = None,
@@ -212,7 +128,7 @@ def run(
     target_become: bool | None = None,
 ) -> None:
     host_os = detect_os()
-    MODULES = _module_labels(host_os)
+    MODULES = module_labels(host_os)
 
     console.print(Panel(
         f"[bold cyan]Replibook v{__version__}[/bold cyan]\n"
@@ -220,8 +136,11 @@ def run(
         expand=False,
     ))
 
-    if run_all:
-        selected_keys = list(MODULES.keys())
+    if run_all or selected_modules:
+        selected_keys = selected_modules or list(MODULES.keys())
+        invalid = [key for key in selected_keys if key not in MODULES]
+        if invalid:
+            raise ValueError(f"Unknown scanner module(s): {', '.join(invalid)}")
         target, use_become = _target_from_options(
             host_os,
             target_connection,
@@ -247,11 +166,10 @@ def run(
 
     console.print("\n[bold]Scanning...[/bold]")
 
-    scan_results: dict = {}
-    for key in selected_keys:
-        label, _, ScannerClass = MODULES[key]
-        console.print(f"  [cyan]→[/cyan] {label}")
-        scan_results[key] = ScannerClass().scan()
+    def print_progress(message: str) -> None:
+        console.print(f"  [cyan]→[/cyan] {message.removeprefix('Scanning ').removesuffix('...')}")
+
+    scan_results = scan_selected_modules(selected_keys, on_progress=print_progress)
 
     counts = {
         "system": len(scan_results.get("system", [])),

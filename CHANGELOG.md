@@ -13,6 +13,9 @@ All notable changes to Replibook are documented here.
 - Scheduled task scanner for cron, `/etc/cron.*` and macOS launchd plist locations.
 - Generated playbooks now include reviewed network and system configuration sections.
 - Generated playbooks now include reviewed scheduled task sections, with cron recreation tasks disabled by default.
+- Windows desktop app frontend with Replibook branding, shared generator backend, playbook apply support and GitHub Actions EXE build.
+- Native Windows scanners for installed programs, services, network configuration and scheduled tasks.
+- `replibook modules`, `replibook gui`, and `replibook scan --modules ...` for commander-friendly automation.
 
 ---
 
