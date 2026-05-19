@@ -47,13 +47,13 @@ Use the Knowledge Base for common setup problems and generated-playbook warnings
 ### 1. Install
 
 ```bash
-pipx install git+https://github.com/AlexRosbach/Replibook.git
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
 ```
 
 > No `pipx`? Install it once: `brew install pipx` (macOS) or `apt install pipx` (Linux).
 >
-> To install a specific release tag, append it to the Git URL:
-> `pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0`
+> To install a different release tag, replace `@v1.0.0` in the command above.
+> To install the latest development version instead, omit the `@<tag>` suffix.
 
 ### 2. Run it
 

@@ -45,26 +45,29 @@ For quick setup and common failure cases, also see the [Knowledge Base / FAQ](kn
 **macOS:**
 ```bash
 brew install pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
 ```
 
 **Linux:**
 ```bash
 apt install pipx
 # or: pip install --user pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
 ```
 
 ### Install a specific version
 
 ```bash
 pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+# replace @v1.0.0 with another tag, or omit @<tag> for latest development
 ```
 
 ### Alternative: pip from GitHub
 
 ```bash
-pip install git+https://github.com/AlexRosbach/Replibook.git
+python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+# or inside a virtual environment:
+python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
 ```
 
 ### From source
