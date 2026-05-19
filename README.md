@@ -105,7 +105,7 @@ Replibook shows the selected playbook and inventory before handing off to `ansib
 
 ### Windows desktop app
 
-Download `Replibook.exe` from the release assets or from the latest `Build Windows Desktop App` workflow artifact.
+Download `Replibook.exe` from release assets when a Windows build is published. Developers can build the same executable with `scripts/build-windows.ps1`.
 
 The app keeps the Python backend intact and adds a desktop UI for:
 - creating a playbook and inventory from the shared generator backend

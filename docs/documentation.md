@@ -83,7 +83,7 @@ pip install -e .
 
 ### Windows executable
 
-`Replibook.exe` is built by the `Build Windows Desktop App` GitHub Actions workflow and published as a workflow artifact. Release builds can attach the same artifact to the GitHub release assets.
+`Replibook.exe` is built with `scripts/build-windows.ps1`. Release builds can attach the resulting executable to GitHub release assets.
 
 To build it manually on Windows:
 
