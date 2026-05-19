@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "replibook"
-version = "1.0.1"
-description = "Scan Linux or macOS hosts and generate Ansible playbooks to reproduce them."
+version = "1.1.0"
+description = "Scan Linux, macOS, or Windows hosts and generate Ansible playbooks to reproduce them."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"

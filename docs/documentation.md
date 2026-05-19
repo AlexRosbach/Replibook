@@ -17,12 +17,13 @@
 
 ## Overview
 
-Replibook scans a running Linux or macOS machine and produces a working Ansible playbook that can recreate it on a new host. It auto-detects the operating system and uses the right toolchain on each:
+Replibook scans a running Linux, macOS or Windows machine and produces a working Ansible playbook that can recreate or document the host. It auto-detects the operating system and uses the right toolchain on each:
 
 - **Linux** — `apt` / `dpkg` for packages, `systemd` for services
 - **macOS** — `Homebrew` formulas and casks, `brew services`
+- **Windows** — PowerShell and registry-based inventory for programs, services, network settings and scheduled tasks
 
-Docker container and Docker Compose deployment scanning works identically on both platforms.
+Docker container and Docker Compose deployment scanning works across supported platforms when Docker is available.
 System and network configuration scanning provide additional context for reproducing a host, with network changes guarded by review steps.
 
 For quick setup and common failure cases, also see the [Knowledge Base / FAQ](knowledgebase.md).
@@ -48,29 +49,29 @@ For quick setup and common failure cases, also see the [Knowledge Base / FAQ](kn
 **macOS:**
 ```bash
 brew install pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 **Linux:**
 ```bash
 apt install pipx
 # or: pip install --user pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 ### Install a specific version
 
 ```bash
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
-# replace @v1.0.1 with another tag, or omit @<tag> for latest development
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
+# replace @v1.1.0 with another tag, or omit @<tag> for latest development
 ```
 
 ### Alternative: pip from GitHub
 
 ```bash
-python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 # or inside a virtual environment:
-python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 ### From source

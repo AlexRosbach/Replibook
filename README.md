@@ -4,7 +4,7 @@
 
 **Scan a server. Generate an Ansible playbook. Reproduce it anywhere.**
 
-[![Version](https://img.shields.io/badge/version-1.0.1-6366f1)](https://github.com/AlexRosbach/Replibook/releases/tag/v1.0.1)
+[![Version](https://img.shields.io/badge/version-1.1.0-6366f1)](https://github.com/AlexRosbach/Replibook/releases/tag/v1.1.0)
 [![Python](https://img.shields.io/badge/python-3.10%2B-0ea5e9)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows%20App-22c55e)](docs/documentation.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
@@ -59,12 +59,12 @@ Use the Knowledge Base for common setup problems and generated-playbook warnings
 ### 1. Install
 
 ```bash
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 > No `pipx`? Install it once: `brew install pipx` (macOS) or `apt install pipx` (Linux).
 >
-> To install a different release tag, replace `@v1.0.1` in the command above.
+> To install a different release tag, replace `@v1.1.0` in the command above.
 > To install the latest development version instead, omit the `@<tag>` suffix.
 
 ### 2. Run it
@@ -181,7 +181,7 @@ Interactive run:
 
 ```
 ╭─────────────────────────────────────────────────────╮
-│  Replibook v1.0.1                                   │
+│  Replibook v1.1.0                                   │
 │  Ansible Playbook Generator · detected: macos       │
 ╰─────────────────────────────────────────────────────╯
 

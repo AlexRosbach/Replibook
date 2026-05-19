@@ -6,6 +6,12 @@ All notable changes to Replibook are documented here.
 
 ## Unreleased
 
+No unreleased changes yet.
+
+---
+
+## [1.1.0] — 2026-05-19
+
 ### Added
 - Startup wizard that asks whether to scan or apply when `replibook` is run without explicit command-line options.
 - Network scanner for interface addresses, default gateway, DNS and NetworkManager connection details where available.
