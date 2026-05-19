@@ -85,7 +85,7 @@ class ServiceScanner(BaseScanner):
 
         script = r"""
 Get-CimInstance Win32_Service |
-  Where-Object { $_.State -eq 'Running' -or $_.StartMode -eq 'Auto' } |
+  Where-Object { $_.State -eq 'Running' -or $_.StartMode -eq 'Automatic' } |
   Select-Object Name, State, StartMode |
   Sort-Object Name |
   ConvertTo-Json -Depth 3
@@ -100,7 +100,7 @@ Get-CimInstance Win32_Service |
             start_mode = str(item.get("StartMode", "")).lower()
             services.append(ServiceInfo(
                 name=name,
-                enabled=start_mode == "auto",
+                enabled=start_mode == "automatic",
                 state="started" if state == "running" else "stopped",
                 manager="windows",
             ))
