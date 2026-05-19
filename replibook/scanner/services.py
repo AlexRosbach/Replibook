@@ -84,9 +84,9 @@ class ServiceScanner(BaseScanner):
             return []
 
         script = r"""
-Get-Service |
-  Where-Object { $_.Status -eq 'Running' -or $_.StartType -eq 'Automatic' } |
-  Select-Object Name, Status, StartType |
+Get-CimInstance Win32_Service |
+  Where-Object { $_.State -eq 'Running' -or $_.StartMode -eq 'Auto' } |
+  Select-Object Name, State, StartMode |
   Sort-Object Name |
   ConvertTo-Json -Depth 3
 """
@@ -96,12 +96,12 @@ Get-Service |
             name = str(item.get("Name", "")).strip()
             if not name:
                 continue
-            status = str(item.get("Status", "")).lower()
-            start_type = str(item.get("StartType", "")).lower()
+            state = str(item.get("State", "")).lower()
+            start_mode = str(item.get("StartMode", "")).lower()
             services.append(ServiceInfo(
                 name=name,
-                enabled=start_type == "automatic",
-                state="started" if status == "running" else "stopped",
+                enabled=start_mode == "auto",
+                state="started" if state == "running" else "stopped",
                 manager="windows",
             ))
         return services

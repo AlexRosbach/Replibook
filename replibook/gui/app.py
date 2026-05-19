@@ -257,8 +257,8 @@ class ReplibookDesktop:
                     target=self._target(),
                     use_become=self.target_become.get(),
                 )
-                self.playbook_path.set(playbook)
-                self.inventory_path.set(inventory)
+                self.root.after(0, self.playbook_path.set, playbook)
+                self.root.after(0, self.inventory_path.set, inventory)
                 self.root.after(0, self._append_log, f"Playbook written: {playbook}")
                 self.root.after(0, self._append_log, f"Inventory written: {inventory}")
                 self.root.after(0, messagebox.showinfo, "Replibook", "Playbook and inventory generated.")
