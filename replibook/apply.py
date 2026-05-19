@@ -4,29 +4,54 @@ import sys
 from pathlib import Path
 
 import questionary
+import yaml
 from rich.console import Console
 from rich.panel import Panel
 
 
 console = Console()
 
-NETWORK_KEYWORDS = (
+NETWORK_MODULE_KEYS = {
     "community.general.nmcli",
+}
+
+NETWORK_SCALAR_VALUES = {
     "netplan",
     "networkmanager",
     "systemd-networkd",
+}
+
+NETWORK_MAPPING_KEYS = {
+    "gateway",
+    "gateway4",
+    "gateway6",
+    "nameserver",
+    "nameservers",
+    "network",
+}
+
+NETWORK_PATH_PREFIXES = (
     "/etc/network/interfaces",
     "/etc/netplan",
-    "network:",
-    "ip address",
-    "gateway",
-    "nameserver",
 )
+
+PATH_VALUE_KEYS = {
+    "dest",
+    "path",
+    "src",
+}
+
+IGNORED_ENV_MAPPING_KEYS = {
+    "env",
+    "environment",
+}
 
 
 def _confirm(message: str, default: bool = False) -> bool:
     answer = questionary.confirm(message, default=default).ask()
-    return bool(answer)
+    if answer is None:
+        raise SystemExit(0)
+    return answer
 
 
 def _command_path(name: str) -> str | None:
@@ -58,12 +83,43 @@ def _install_ansible_dependencies() -> None:
         console.print("[dim]Install required collections manually if the playbook needs them.[/dim]")
 
 
+def _has_network_sensitive_content(value: object, parent_key: str | None = None) -> bool:
+    """Recursively inspect parsed YAML for network-sensitive modules, keys, and paths.
+
+    parent_key tracks the containing mapping key so env/environment blocks can be ignored
+    and path-like values can be checked only for relevant YAML keys such as dest/path/src.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            normalized_key = key.lower() if isinstance(key, str) else None
+            if parent_key in IGNORED_ENV_MAPPING_KEYS:
+                continue
+            if normalized_key in NETWORK_MODULE_KEYS or normalized_key in NETWORK_MAPPING_KEYS:
+                return True
+            if _has_network_sensitive_content(item, normalized_key):
+                return True
+        return False
+
+    if isinstance(value, list):
+        return any(_has_network_sensitive_content(item, parent_key) for item in value)
+
+    if isinstance(value, str):
+        normalized_value = value.strip().lower()
+        if normalized_value in NETWORK_SCALAR_VALUES:
+            return True
+        if parent_key in PATH_VALUE_KEYS:
+            return any(normalized_value.startswith(prefix) for prefix in NETWORK_PATH_PREFIXES)
+
+    return False
+
+
 def _contains_network_sensitive_content(playbook_path: Path) -> bool:
     try:
-        content = playbook_path.read_text(errors="ignore").lower()
-    except OSError:
+        with playbook_path.open(encoding="utf-8", errors="ignore") as handle:
+            documents = yaml.safe_load_all(handle)
+            return any(_has_network_sensitive_content(document) for document in documents)
+    except (OSError, yaml.YAMLError):
         return False
-    return any(keyword in content for keyword in NETWORK_KEYWORDS)
 
 
 def apply_playbook(
