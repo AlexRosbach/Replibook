@@ -38,34 +38,43 @@ For quick setup and common failure cases, also see the [Knowledge Base / FAQ](kn
 
 ## Installation
 
-### Recommended: pipx
+### Recommended: pipx from GitHub
 
 `pipx` installs Replibook in an isolated environment without polluting your system Python.
 
 **macOS:**
 ```bash
 brew install pipx
-pipx install replibook
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
 ```
 
 **Linux:**
 ```bash
 apt install pipx
 # or: pip install --user pipx
-pipx install replibook
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
 ```
 
-### Alternative: pip
+### Install a specific version
 
 ```bash
-pip install replibook
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+# replace @v1.0.0 with another tag, or omit @<tag> for latest development
+```
+
+### Alternative: pip from GitHub
+
+```bash
+python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
+# or inside a virtual environment:
+python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.0.0
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/AlexRosbach/replibook.git
-cd replibook
+git clone https://github.com/AlexRosbach/Replibook.git
+cd Replibook
 pip install -e .
 ```
 
