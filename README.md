@@ -13,7 +13,7 @@ Replibook takes a snapshot of what's installed and running on your machine — p
 
 Works on **Linux** (apt + systemd), **macOS** (Homebrew), and **Windows** (installed programs, services, network settings and scheduled tasks as review-first inventory). The Windows desktop app provides a branded UI for creating and applying playbooks through an Ansible-capable backend such as WSL.
 
-![Replibook logo](replibook/assets/replibook-logo-light.png)
+<img src="replibook/assets/replibook-logo-light.png" alt="Replibook logo" width="520">
 
 </div>
 
@@ -41,6 +41,8 @@ Works on **Linux** (apt + systemd), **macOS** (Homebrew), and **Windows** (insta
 - Optional guided `apply` command for generated playbooks, including Ansible dependency setup
 - Windows desktop app (`Replibook.exe`) for local scanning, playbook creation and applying playbooks through WSL or another Ansible command
 - Commander-friendly CLI controls for automation, including module listing and comma-separated scanner selection
+- Review preview with safety classes before playbook generation
+- Optional scan snapshots and drift comparison via `replibook diff`
 
 ---
 
@@ -105,7 +107,7 @@ Replibook shows the selected playbook and inventory before handing off to `ansib
 
 ### Windows desktop app
 
-Download `Replibook.exe` from release assets when a Windows build is published. Developers can build the same executable with `scripts/build-windows.ps1`.
+Download `Replibook.exe` from release assets when a Windows build is published. Developers can build the same executable with `scripts/build-windows.ps1`; the script fails if `dist\Replibook.exe` is not created.
 
 The app keeps the Python backend intact and adds a desktop UI for:
 - creating a playbook and inventory from the shared generator backend
@@ -152,6 +154,18 @@ replibook modules
 
 # Run selected scanner modules without prompts
 replibook scan --modules system,network,scheduled_tasks --output ./playbooks
+
+# Exclude generated sections after scan review
+replibook scan --all --exclude-sections network,scheduled_tasks
+
+# Save raw scan data for review or drift comparison
+replibook scan --all --save-snapshot ./snapshots/server-a.json
+
+# Compare two snapshots
+replibook diff ./snapshots/server-a-before.json ./snapshots/server-a-after.json
+
+# Print a remote scan workflow for SSH targets
+replibook remote-recipe server-a.example.com --user admin
 
 # Custom output directory
 replibook --all --output /opt/playbooks

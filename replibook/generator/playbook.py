@@ -5,6 +5,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
+from replibook.review import build_review_report
 from replibook.utils import detect_os
 
 
@@ -45,6 +46,7 @@ class PlaybookGenerator:
         self.output_dir = Path(output_dir)
         self.target = target
         self.use_become = use_become
+        self.review_report_path: str | None = None
         template_dir = Path(__file__).parent / "templates"
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
@@ -71,6 +73,8 @@ class PlaybookGenerator:
             timestamp=timestamp,
             host_os=host_os,
             use_become=use_become,
+            review_report=build_review_report(self.scan_results),
+            review_report_path=self.review_report_path,
             system_configs=self.scan_results.get("system", []),
             scheduled_tasks=self.scan_results.get("scheduled_tasks", []),
             apt_packages=[p for p in packages if p.manager == "apt"],

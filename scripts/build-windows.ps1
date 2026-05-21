@@ -19,4 +19,8 @@ Set-Location $repoRoot
     --add-data "replibook/assets;replibook/assets" `
     replibook/gui/app.py
 
+if (!(Test-Path "dist/Replibook.exe")) {
+    throw "Build failed: dist/Replibook.exe was not created"
+}
+
 Write-Host "Built dist/Replibook.exe"

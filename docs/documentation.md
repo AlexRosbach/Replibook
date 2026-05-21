@@ -1,5 +1,7 @@
 # Replibook — Documentation
 
+![Replibook logo](../replibook/assets/replibook-logo.svg)
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -96,6 +98,8 @@ cd Replibook
 
 The output is written to `dist\Replibook.exe`.
 
+The build script fails if `dist\Replibook.exe` is not created, which makes it suitable for local release builds or a future Windows CI job.
+
 ---
 
 ## Usage
@@ -170,6 +174,31 @@ replibook gui
 # Apply from automation
 replibook apply ./playbooks/myhost_playbook.yml --inventory ./playbooks/inventory.ini --check --yes
 ```
+
+### Review preview, snapshots and drift
+
+Every generated playbook starts with a Replibook review summary. It lists included sections, item counts and safety classes:
+
+- `high` — usually safe to automate after normal review
+- `medium` — can affect availability or host identity
+- `review` — keep as review-first until paths, users and data are checked
+- `danger` — disabled examples that can break access, especially network settings
+
+Replibook also writes `replibook-review.json` next to the generated playbook. Use it as a compact checklist before sharing or applying output.
+
+For repeatable documentation, save raw scan snapshots:
+
+```bash
+replibook scan --all --save-snapshot ./snapshots/server-a.json
+```
+
+Compare two snapshots later:
+
+```bash
+replibook diff ./snapshots/server-a-before.json ./snapshots/server-a-after.json
+```
+
+For remote machines, `replibook remote-recipe <host>` prints a guarded SSH/SCP workflow that installs/runs Replibook on the target, copies the snapshot back and leaves playbook generation/review on the operator machine.
 
 ### Apply command
 

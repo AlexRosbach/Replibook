@@ -6,6 +6,13 @@ from rich.panel import Panel
 
 from replibook.generator.playbook import PlaybookGenerator, TargetConfig
 from replibook.modules import module_labels
+from replibook.review import (
+    build_review_report,
+    filter_scan_results,
+    save_snapshot,
+    summarize_scan,
+    write_review_report,
+)
 from replibook.runtime import scan_selected_modules
 from replibook.utils import detect_os
 from replibook.version import __version__
@@ -115,10 +122,43 @@ def _configure_target(host_os: str) -> tuple[TargetConfig | None, bool | None]:
     )
 
 
+def _parse_csv(value: str | None) -> set[str]:
+    if not value:
+        return set()
+    return {item.strip() for item in value.split(",") if item.strip()}
+
+
+def _review_sections(scan_results: dict, excluded_sections: set[str], interactive: bool) -> tuple[dict, set[str]]:
+    rows = summarize_scan(scan_results)
+    if rows:
+        console.print("\n[bold]Review preview[/bold]")
+        for row in rows:
+            console.print(
+                f"  [dim]{row['label']}:[/dim] [white]{row['count']}[/white] "
+                f"safety={row['safety']} — {row['reason']}"
+            )
+
+    if interactive:
+        for row in rows:
+            include = _ask_bool(f"Include {row['label']} in generated playbook?", default=True)
+            if not include:
+                excluded_sections.add(row["key"])
+
+    filtered = filter_scan_results(scan_results, excluded_sections)
+    report = build_review_report(filtered)
+    if report["backup_hints"]:
+        console.print("\n[bold yellow]Backup / migration notes[/bold yellow]")
+        for hint in report["backup_hints"]:
+            console.print(f"  [yellow]•[/yellow] {hint}")
+    return filtered, excluded_sections
+
+
 def run(
     output: str,
     run_all: bool = False,
     selected_modules: list[str] | None = None,
+    exclude_sections: str | None = None,
+    save_snapshot_path: str | None = None,
     target_connection: str = "local",
     target_name: str | None = None,
     target_host: str | None = None,
@@ -170,6 +210,9 @@ def run(
         console.print(f"  [cyan]→[/cyan] {message.removeprefix('Scanning ').removesuffix('...')}")
 
     scan_results = scan_selected_modules(selected_keys, on_progress=print_progress)
+    if save_snapshot_path:
+        snapshot = save_snapshot(scan_results, save_snapshot_path)
+        console.print(f"  [green]✓[/green] Scan snapshot written to: [bold]{snapshot}[/bold]")
 
     counts = {
         "system": len(scan_results.get("system", [])),
@@ -187,11 +230,22 @@ def run(
             label = MODULES[key][0]
             console.print(f"  [dim]{label}:[/dim] [white]{count}[/white] found")
 
+    scan_results, excluded = _review_sections(
+        scan_results,
+        _parse_csv(exclude_sections),
+        interactive=not (run_all or selected_modules),
+    )
+    if excluded:
+        console.print(f"\n[dim]Excluded sections:[/dim] {', '.join(sorted(excluded))}")
+
     console.print("\n[bold]Generating playbook...[/bold]")
+    review_report = write_review_report(scan_results, output)
     generator = PlaybookGenerator(scan_results, output, target=target, use_become=use_become)
+    generator.review_report_path = str(review_report)
     playbook_path, inventory_path = generator.generate()
 
     console.print()
     console.print(f"[green]✓[/green] Playbook written to: [bold]{playbook_path}[/bold]")
     console.print(f"[green]✓[/green] Inventory written to: [bold]{inventory_path}[/bold]")
+    console.print(f"[green]✓[/green] Review report written to: [bold]{review_report}[/bold]")
     console.print("[dim]Review generated files before sharing or applying them.[/dim]")

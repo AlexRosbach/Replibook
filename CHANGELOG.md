@@ -6,7 +6,13 @@ All notable changes to Replibook are documented here.
 
 ## Unreleased
 
-No unreleased changes yet.
+### Added
+- Hardened Windows EXE build script validation so `scripts/build-windows.ps1` fails when `dist/Replibook.exe` is not created.
+- Review preview and safety classification for generated playbook sections, including a `replibook-review.json` sidecar report.
+- Optional section exclusion after scanning via interactive prompts or `--exclude-sections`.
+- Scan snapshot export via `--save-snapshot` and `replibook diff` for drift comparison between two snapshots.
+- Remote scan recipe command that prints an SSH/SCP workflow for collecting scan snapshots from another machine.
+- Backup and migration hints for Docker, Compose, network and scheduled-task findings.
 
 ---
 

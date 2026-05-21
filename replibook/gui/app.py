@@ -13,6 +13,7 @@ from tkinter import BooleanVar, StringVar, Tk, filedialog, messagebox, ttk
 from replibook.apply import _contains_network_sensitive_content
 from replibook.generator.playbook import TargetConfig
 from replibook.modules import module_labels
+from replibook.review import save_snapshot, summarize_scan, write_review_report
 from replibook.runtime import scan_selected_modules, write_generated_playbook
 from replibook.utils import detect_os
 from replibook.version import __version__
@@ -251,6 +252,31 @@ class ReplibookDesktop:
                         selected,
                         on_progress=lambda msg: self.root.after(0, self._append_log, msg),
                     )
+                    output_dir = Path(self.output_dir.get())
+                    snapshot_path = save_snapshot(scan_results, output_dir / "replibook-scan.json")
+                    review_path = write_review_report(scan_results, output_dir)
+                    preview_lines = [
+                        f"{row['label']}: {row['count']} item(s), safety={row['safety']}"
+                        for row in summarize_scan(scan_results)
+                    ]
+                    preview_text = "\n".join(preview_lines) or "No scanner results found."
+                    self.root.after(0, self._append_log, f"Scan snapshot written: {snapshot_path}")
+                    self.root.after(0, self._append_log, f"Review report written: {review_path}")
+                    decision = {"continue": False}
+                    event = threading.Event()
+
+                    def ask_review() -> None:
+                        decision["continue"] = messagebox.askyesno(
+                            "Replibook review preview",
+                            preview_text + "\n\nGenerate playbook from this scan?",
+                        )
+                        event.set()
+
+                    self.root.after(0, ask_review)
+                    event.wait()
+                    if not decision["continue"]:
+                        self.root.after(0, self._append_log, "Generation cancelled after review preview.")
+                        return
                 playbook, inventory = write_generated_playbook(
                     scan_results,
                     self.output_dir.get(),

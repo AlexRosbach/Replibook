@@ -6,6 +6,29 @@
   hosts: replibook
   become: {{ "true" if use_become else "false" }}
   tasks:
+    # ── Review Summary ───────────────────────────────────────────────────────
+    - name: Review Replibook safety summary
+      ansible.builtin.debug:
+        msg:
+{% for section in review_report.sections %}
+          - "{{ section.label }}: {{ section.count }} item(s), safety={{ section.safety }} — {{ section.reason }}"
+{% endfor %}
+
+{% if review_report.backup_hints %}
+    - name: Review backup and migration notes
+      ansible.builtin.debug:
+        msg:
+{% for hint in review_report.backup_hints %}
+          - {{ hint | tojson }}
+{% endfor %}
+
+{% endif %}
+{% if review_report_path %}
+    - name: Review report file
+      ansible.builtin.debug:
+        msg: "Detailed Replibook review report was written to {{ review_report_path }}"
+
+{% endif %}
 {% set has_any = system_configs or apt_packages or brew_packages or cask_packages or windows_packages or systemd_services or brew_services or windows_services or scheduled_tasks or containers or deployments or network_interfaces %}
 {% if not has_any %}
     - name: Replibook scan returned no results

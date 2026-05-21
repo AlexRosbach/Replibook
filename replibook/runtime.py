@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from replibook.generator.playbook import PlaybookGenerator, TargetConfig
 from replibook.modules import module_labels
+from replibook.review import write_review_report
 from replibook.utils import detect_os
 
 ProgressCallback = Callable[[str], None]
@@ -32,4 +33,5 @@ def write_generated_playbook(
 ) -> tuple[str, str]:
     """Write playbook and inventory through the shared backend generator."""
     generator = PlaybookGenerator(scan_results, output, target=target, use_become=use_become)
+    generator.review_report_path = str(write_review_report(scan_results, output))
     return generator.generate()
