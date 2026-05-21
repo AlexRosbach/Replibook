@@ -17,6 +17,7 @@ Set-Location $repoRoot
     --name Replibook `
     --icon replibook/assets/replibook-icon.ico `
     --add-data "replibook/assets;replibook/assets" `
+    --add-data "replibook/generator/templates;replibook/generator/templates" `
     replibook/gui/app.py
 
 if (!(Test-Path "dist/Replibook.exe")) {

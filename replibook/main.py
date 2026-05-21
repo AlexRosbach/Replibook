@@ -1,5 +1,6 @@
 import typer
 from click.core import ParameterSource
+from replibook.profiles import DEFAULT_SCAN_PROFILE
 from replibook.version import __version__
 
 app = typer.Typer(
@@ -20,6 +21,7 @@ def _run_scan(
     output: str,
     run_all: bool,
     modules: str | None,
+    profile: str | None,
     exclude_sections: str | None,
     save_snapshot: str | None,
     target_connection: str,
@@ -37,6 +39,7 @@ def _run_scan(
             output=output,
             run_all=run_all,
             selected_modules=_parse_modules(modules),
+            profile=profile,
             exclude_sections=exclude_sections,
             save_snapshot_path=save_snapshot,
             target_connection=target_connection,
@@ -73,6 +76,14 @@ def _modules_option() -> str | None:
         None,
         "--modules",
         help="Comma-separated scanner keys to run non-interactively, e.g. system,network,scheduled_tasks",
+    )
+
+
+def _profile_option() -> str | None:
+    return typer.Option(
+        None,
+        "--profile",
+        help=f"Scan profile to use instead of --all, e.g. role, terminal_server, container_host, full. Default guided profile: {DEFAULT_SCAN_PROFILE}",
     )
 
 
@@ -161,7 +172,10 @@ def _version_option() -> bool:
 def _parse_modules(value: str | None) -> list[str] | None:
     if not value:
         return None
-    return [item.strip() for item in value.split(",") if item.strip()]
+    parsed = [item.strip() for item in value.split(",") if item.strip()]
+    if not parsed:
+        raise ValueError("--modules must include at least one scanner key")
+    return parsed
 
 
 def _resolve_scan_option(ctx: typer.Context, name: str, value: object) -> object:
@@ -183,6 +197,7 @@ def _has_explicit_scan_option(ctx: typer.Context) -> bool:
             "output",
             "run_all",
             "modules",
+            "profile",
             "exclude_sections",
             "save_snapshot",
             "target_connection",
@@ -202,6 +217,7 @@ def default(
     output: str = _output_option(),
     run_all: bool = _run_all_option(),
     modules: str | None = _modules_option(),
+    profile: str | None = _profile_option(),
     exclude_sections: str | None = _exclude_sections_option(),
     save_snapshot: str | None = _save_snapshot_option(),
     target_connection: str = _target_connection_option(),
@@ -225,6 +241,7 @@ def default(
         output=output,
         run_all=run_all,
         modules=modules,
+        profile=profile,
         exclude_sections=exclude_sections,
         save_snapshot=save_snapshot,
         target_connection=target_connection,
@@ -243,6 +260,7 @@ def scan(
     output: str = _output_option(),
     run_all: bool = _run_all_option(),
     modules: str | None = _modules_option(),
+    profile: str | None = _profile_option(),
     exclude_sections: str | None = _exclude_sections_option(),
     save_snapshot: str | None = _save_snapshot_option(),
     target_connection: str = _target_connection_option(),
@@ -260,6 +278,7 @@ def scan(
             ("output", output),
             ("run_all", run_all),
             ("modules", modules),
+            ("profile", profile),
             ("exclude_sections", exclude_sections),
             ("save_snapshot", save_snapshot),
             ("target_connection", target_connection),
@@ -276,6 +295,7 @@ def scan(
         output=resolved["output"],
         run_all=resolved["run_all"],
         modules=resolved["modules"],
+        profile=resolved["profile"],
         exclude_sections=resolved["exclude_sections"],
         save_snapshot=resolved["save_snapshot"],
         target_connection=resolved["target_connection"],
@@ -298,6 +318,15 @@ def modules() -> None:
     typer.echo(f"Detected backend: {host_os}")
     for key, (label, description, _) in module_labels(host_os).items():
         typer.echo(f"{key}\t{label}\t{description}")
+
+
+@app.command()
+def profiles() -> None:
+    """List scan profiles for practical, role-oriented scans."""
+    from replibook.profiles import profile_choices
+
+    for profile in profile_choices():
+        typer.echo(f"{profile.key}\t{profile.label}\t{profile.description}\tmodules={','.join(profile.modules)}")
 
 
 @app.command("diff")

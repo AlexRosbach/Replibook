@@ -1,4 +1,5 @@
 import socket
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -47,7 +48,9 @@ class PlaybookGenerator:
         self.target = target
         self.use_become = use_become
         self.review_report_path: str | None = None
-        template_dir = Path(__file__).parent / "templates"
+        frozen_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
+        frozen_template_dir = frozen_root / "replibook" / "generator" / "templates"
+        template_dir = frozen_template_dir if frozen_template_dir.exists() else Path(__file__).parent / "templates"
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             trim_blocks=True,

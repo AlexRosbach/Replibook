@@ -36,7 +36,8 @@ Works on **Linux** (apt + systemd), **macOS** (Homebrew), and **Windows** (insta
 - Docker container scanning via the Docker SDK
 - Docker Compose deployment discovery
 - Ansible playbook and matching inventory generation
-- Guided CLI with explained module prompts
+- Role-oriented scan profiles for practical reproduction workflows
+- Guided CLI with explained profile and module prompts
 - Local and SSH target inventory configuration
 - Optional guided `apply` command for generated playbooks, including Ansible dependency setup
 - Windows desktop app (`Replibook.exe`) for local scanning, playbook creation and applying playbooks through WSL or another Ansible command
@@ -111,8 +112,9 @@ Download `Replibook.exe` from release assets when a Windows build is published. 
 
 The app keeps the Python backend intact and adds a desktop UI for:
 - creating a playbook and inventory from the shared generator backend
-- scanning Linux, macOS or Windows with platform-specific scanners
+- scanning Linux, macOS or Windows with platform-specific scanners and role-oriented profiles
 - applying playbooks from Windows through `wsl ansible-playbook` or a custom Ansible command
+- opening the GitHub repository or bug report form directly from the app
 
 Windows items that do not expose a reliable unattended installer command are still shown as review facts in the generated playbook instead of being silently dropped.
 
@@ -120,7 +122,7 @@ Windows items that do not expose a reliable unattended installer command are sti
 
 ## What gets scanned
 
-Replibook detects your OS and picks the right tools automatically:
+Replibook detects your OS and picks the right tools automatically. The default scan is **Role reproduction**, which is meant for rebuilding a configured host without scanning unrelated Docker/Compose state. Use **Container host** or **Full audit** when that extra inventory is actually relevant.
 
 | Module | Linux | macOS | Windows |
 |---|---|---|---|
@@ -151,6 +153,15 @@ replibook --all
 
 # List automation-friendly scanner keys
 replibook modules
+
+# List practical scan profiles
+replibook profiles
+
+# Role-oriented scan for rebuilding a configured server/workstation
+replibook scan --profile role --output ./playbooks
+
+# Terminal server style scan: system, programs, services, tasks and network context
+replibook scan --profile terminal_server --output ./playbooks
 
 # Run selected scanner modules without prompts
 replibook scan --modules system,network,scheduled_tasks --output ./playbooks
@@ -298,9 +309,10 @@ replibook/
 |---|---|
 | `main.py` | Typer CLI entry point |
 | `cli.py` | Interactive menu, scan orchestration |
-| `scanner/` | One module per scan domain — auto-detects Linux vs macOS |
+| `profiles.py` | Role-oriented scan profiles such as role reproduction, terminal server, container host and full audit |
+| `scanner/` | One module per scan domain — auto-detects Linux, macOS and Windows |
 | `generator/playbook.py` | Renders scan results into Ansible YAML via Jinja2 |
-| `utils/os_detect.py` | Returns `linux` / `macos` |
+| `utils/os_detect.py` | Returns `linux` / `macos` / `windows` / `unknown` |
 
 **Dependencies:** Python 3.10+, Typer, Rich, questionary, Jinja2, docker-py
 

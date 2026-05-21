@@ -127,6 +127,15 @@ replibook --all
 # Scan everything, custom output dir
 replibook --all --output /opt/playbooks
 
+# Practical role scan for rebuilding a configured host
+replibook scan --profile role --output ./playbooks
+
+# Terminal server style scan: system, programs, services, tasks and network context
+replibook scan --profile terminal_server --output ./playbooks
+
+# Container-focused host scan
+replibook scan --profile container_host --output ./playbooks
+
 # Scan everything and generate SSH inventory for another host
 replibook --all \
   --target-connection ssh \
@@ -143,6 +152,7 @@ replibook --all \
 |---|---|---|---|
 | `--output` | `-o` | `./playbooks` | Directory where playbooks are written |
 | `--all` | `-a` | `false` | Skip menu, run all modules |
+| `--profile` | | | Role-oriented scan profile: `role`, `terminal_server`, `container_host`, or `full` |
 | `--modules` | | | Comma-separated scanner keys for automation, e.g. `system,network,scheduled_tasks` |
 | `--target-connection` | | `local` | Inventory connection type: `local` or `ssh` |
 | `--target-name` | | | Inventory host name |
@@ -161,6 +171,9 @@ Every major workflow exposed by the desktop app is also reachable from the comma
 ```bash
 # List scanner module keys for this platform
 replibook modules
+
+# List role-oriented scan profiles
+replibook profiles
 
 # Run only selected scanner modules
 replibook scan --modules system,network,scheduled_tasks --output ./playbooks
@@ -218,6 +231,19 @@ replibook apply ./playbooks/myhost_playbook.yml --inventory ./playbooks/inventor
 The `apply` command does not hide Ansible. It validates the selected files, offers to install missing Ansible dependencies, shows what will run, asks for confirmation, then calls `ansible-playbook`.
 
 If network-related configuration is detected, Replibook asks for a second confirmation before applying changes. In non-interactive runs, network-sensitive playbooks require `--confirm-network-changes`; otherwise Replibook refuses to apply them.
+
+## Scan Profiles
+
+Profiles keep Replibook useful for real rebuild work instead of collecting everything just because a scanner exists.
+
+| Profile | Intended use | Included modules |
+|---|---|---|
+| `role` | Default rebuild/documentation scan for a configured server or workstation | system, packages/programs, services, scheduled tasks, network |
+| `terminal_server` | Reproduce terminal-server style hosts from an existing configured machine | system, packages/programs, services, scheduled tasks, network |
+| `container_host` | Reproduce Docker-heavy hosts | system, packages/programs, services, Docker, Compose, network |
+| `full` | Discovery/audit mode when you intentionally want everything | all available modules |
+
+All profiles are cross-platform. A profile selects the same intent on Linux, macOS and Windows, while each scanner adapts to the platform-specific APIs and available tools.
 
 ## Windows Desktop App
 

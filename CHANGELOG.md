@@ -4,21 +4,19 @@ All notable changes to Replibook are documented here.
 
 ---
 
-## Unreleased
+## [1.1.0] — 2026-05-19
 
 ### Added
 - Hardened Windows EXE build script validation so `scripts/build-windows.ps1` fails when `dist/Replibook.exe` is not created.
+- Windows EXE packaging now includes generator templates so `Replibook.exe` can generate playbooks without missing `site.yml.j2`.
+- Role-oriented scan profiles (`role`, `terminal_server`, `container_host`, `full`) for useful reproduction scans without default Docker/Compose noise.
+- GitHub and bug-report links in the desktop app, plus CLI output hints for Linux/macOS/Windows users.
+- Cleaner desktop layout with scan profiles and modernized spacing/styles.
 - Review preview and safety classification for generated playbook sections, including a `replibook-review.json` sidecar report.
 - Optional section exclusion after scanning via interactive prompts or `--exclude-sections`.
 - Scan snapshot export via `--save-snapshot` and `replibook diff` for drift comparison between two snapshots.
 - Remote scan recipe command that prints an SSH/SCP workflow for collecting scan snapshots from another machine.
 - Backup and migration hints for Docker, Compose, network and scheduled-task findings.
-
----
-
-## [1.1.0] — 2026-05-19
-
-### Added
 - Startup wizard that asks whether to scan or apply when `replibook` is run without explicit command-line options.
 - Network scanner for interface addresses, default gateway, DNS and NetworkManager connection details where available.
 - System configuration scanner for hostname, timezone and locale.
@@ -28,6 +26,9 @@ All notable changes to Replibook are documented here.
 - Windows desktop app frontend with Replibook branding, shared generator backend, playbook apply support and a PowerShell build script for EXE packaging.
 - Native Windows scanners for installed programs, services, network configuration and scheduled tasks.
 - `replibook modules`, `replibook gui`, and `replibook scan --modules ...` for commander-friendly automation.
+
+### Fixed
+- Addressed Copilot review findings for Windows service `StartMode`, Tkinter availability, Ansible runner error reporting, scan-module validation, OS docstrings and generic no-result messages.
 
 ---
 

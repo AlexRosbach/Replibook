@@ -3,7 +3,7 @@ import shutil
 
 
 def detect_os() -> str:
-    """Return 'linux', 'macos', or 'unknown'."""
+    """Return 'linux', 'macos', 'windows', or 'unknown'."""
     system = platform.system()
     if system == "Linux":
         return "linux"

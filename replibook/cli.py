@@ -6,6 +6,7 @@ from rich.panel import Panel
 
 from replibook.generator.playbook import PlaybookGenerator, TargetConfig
 from replibook.modules import module_labels
+from replibook.profiles import DEFAULT_SCAN_PROFILE, SCAN_PROFILES, modules_for_profile, profile_choices
 from replibook.review import (
     build_review_report,
     filter_scan_results,
@@ -48,6 +49,24 @@ def _select_modules(modules: dict) -> list[str]:
         console.print("[yellow]No modules selected. Exiting.[/yellow]")
         raise SystemExit(0)
     return selected
+
+
+def _select_profile(modules: dict) -> tuple[str, list[str]]:
+    choices = [
+        questionary.Choice(
+            title=f"{profile.label} — {profile.description}",
+            value=profile.key,
+        )
+        for profile in profile_choices()
+    ]
+    answer = questionary.select(
+        "What kind of scan do you want?",
+        choices=choices,
+        default=DEFAULT_SCAN_PROFILE,
+    ).ask()
+    if answer is None:
+        raise SystemExit(0)
+    return answer, modules_for_profile(answer, modules)
 
 
 def _target_from_options(
@@ -157,6 +176,7 @@ def run(
     output: str,
     run_all: bool = False,
     selected_modules: list[str] | None = None,
+    profile: str | None = None,
     exclude_sections: str | None = None,
     save_snapshot_path: str | None = None,
     target_connection: str = "local",
@@ -176,8 +196,18 @@ def run(
         expand=False,
     ))
 
-    if run_all or selected_modules:
-        selected_keys = selected_modules or list(MODULES.keys())
+    if sum(bool(value) for value in (run_all, selected_modules, profile)) > 1:
+        raise ValueError("Use only one of --all, --modules or --profile")
+
+    interactive_mode = not (run_all or selected_modules or profile)
+
+    if run_all or selected_modules or profile:
+        if profile:
+            selected_keys = modules_for_profile(profile, MODULES)
+            profile_label = SCAN_PROFILES[profile].label
+            console.print(f"[dim]Scan profile:[/dim] {profile_label}")
+        else:
+            selected_keys = selected_modules or list(MODULES.keys())
         invalid = [key for key in selected_keys if key not in MODULES]
         if invalid:
             raise ValueError(f"Unknown scanner module(s): {', '.join(invalid)}")
@@ -192,7 +222,11 @@ def run(
             target_become,
         )
     else:
-        selected_keys = _select_modules(MODULES)
+        selected_profile, selected_keys = _select_profile(MODULES)
+        profile = selected_profile
+        console.print(f"[dim]Selected modules:[/dim] {', '.join(selected_keys)}")
+        if _ask_bool("Fine-tune modules manually?", default=False):
+            selected_keys = _select_modules(MODULES)
 
         output_answer = questionary.text(
             "Output directory for playbooks:",
@@ -233,7 +267,7 @@ def run(
     scan_results, excluded = _review_sections(
         scan_results,
         _parse_csv(exclude_sections),
-        interactive=not (run_all or selected_modules),
+        interactive=interactive_mode,
     )
     if excluded:
         console.print(f"\n[dim]Excluded sections:[/dim] {', '.join(sorted(excluded))}")
@@ -249,3 +283,4 @@ def run(
     console.print(f"[green]✓[/green] Inventory written to: [bold]{inventory_path}[/bold]")
     console.print(f"[green]✓[/green] Review report written to: [bold]{review_report}[/bold]")
     console.print("[dim]Review generated files before sharing or applying them.[/dim]")
+    console.print("[dim]GitHub: https://github.com/AlexRosbach/Replibook · Report a bug: https://github.com/AlexRosbach/Replibook/issues/new?template=bug_report.yml[/dim]")
