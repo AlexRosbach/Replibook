@@ -24,6 +24,30 @@ SCAN_PROFILES: dict[str, ScanProfile] = {
         description="Captures the configuration most relevant for reproducing a terminal server.",
         modules=("system", "packages", "services", "scheduled_tasks", "network"),
     ),
+    "web_server": ScanProfile(
+        key="web_server",
+        label="Web server",
+        description="Captures packages, services, scheduled tasks, network context and optional container workloads.",
+        modules=("system", "packages", "services", "scheduled_tasks", "docker", "deployments", "network"),
+    ),
+    "database_server": ScanProfile(
+        key="database_server",
+        label="Database server",
+        description="Captures server packages, database-related services, scheduled jobs and network context for review.",
+        modules=("system", "packages", "services", "scheduled_tasks", "network"),
+    ),
+    "workstation": ScanProfile(
+        key="workstation",
+        label="Workstation",
+        description="Captures installed programs, local services, scheduled tasks and basic network context.",
+        modules=("system", "packages", "services", "scheduled_tasks", "network"),
+    ),
+    "automation_node": ScanProfile(
+        key="automation_node",
+        label="Automation node",
+        description="Captures packages, services, scheduled tasks and container workloads used by automation hosts.",
+        modules=("system", "packages", "services", "scheduled_tasks", "docker", "deployments", "network"),
+    ),
     "container_host": ScanProfile(
         key="container_host",
         label="Container host",

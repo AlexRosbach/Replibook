@@ -9,12 +9,14 @@ import threading
 import webbrowser
 from collections.abc import Callable
 from pathlib import Path
+
 try:
-    from tkinter import BooleanVar, StringVar, Tk, filedialog, messagebox, ttk
+    import customtkinter as ctk
+    from tkinter import BooleanVar, StringVar, filedialog, messagebox
 except ImportError as exc:  # pragma: no cover - depends on host Python build
     raise SystemExit(
-        "Replibook GUI requires Tkinter. Install the Tk package for your Python distribution "
-        "(for example python3-tk on Debian/Ubuntu) or use the CLI with `replibook`."
+        "Replibook GUI requires Tkinter and CustomTkinter. Install the GUI dependencies "
+        "or use the CLI with `replibook`."
     ) from exc
 
 from replibook.apply import contains_network_sensitive_content
@@ -27,11 +29,19 @@ from replibook.utils import detect_os
 from replibook.version import __version__
 
 
+GITHUB_URL = "https://github.com/AlexRosbach/Replibook"
+BUG_REPORT_URL = "https://github.com/AlexRosbach/Replibook/issues/new?template=bug_report.yml"
+
+
 def _asset_path(name: str) -> Path:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
-    candidate = base / "assets" / name
-    if candidate.exists():
-        return candidate
+    for candidate in (
+        base / "assets" / name,
+        base / "replibook" / "assets" / name,
+        Path(__file__).resolve().parents[1] / "assets" / name,
+    ):
+        if candidate.exists():
+            return candidate
     return Path(__file__).resolve().parents[1] / "assets" / name
 
 
@@ -41,19 +51,24 @@ def _split_command(command: str) -> list[str]:
 
 class ReplibookDesktop:
     def __init__(self) -> None:
-        self.root = Tk()
+        ctk.set_appearance_mode("system")
+        ctk.set_default_color_theme("blue")
+
+        self.root = ctk.CTk()
         self.root.title(f"Replibook {__version__}")
-        self.root.geometry("1040x760")
-        self.root.minsize(900, 640)
+        self.root.geometry("1180x780")
+        self.root.minsize(980, 680)
         self.host_os = detect_os()
         self.module_vars: dict[str, BooleanVar] = {}
         self.profile_var = StringVar(value=DEFAULT_SCAN_PROFILE)
+        self.profile_buttons: dict[str, ctk.CTkButton] = {}
 
-        icon = _asset_path("replibook-icon.png")
-        if icon.exists():
-            self._icon_image = self._load_icon(icon)
-            if self._icon_image is not None:
-                self.root.iconphoto(True, self._icon_image)
+        icon = _asset_path("replibook-icon.ico")
+        if icon.exists() and platform.system() == "Windows":
+            try:
+                self.root.iconbitmap(str(icon))
+            except Exception:
+                pass
 
         self.output_dir = StringVar(value=str(Path.cwd() / "playbooks"))
         self.target_connection = StringVar(value="local")
@@ -70,184 +85,203 @@ class ReplibookDesktop:
         self.apply_check = BooleanVar(value=True)
         self.confirm_network = BooleanVar(value=False)
 
-        self._configure_style()
         self._build_ui()
-
-    def _load_icon(self, path: Path):
-        try:
-            from tkinter import PhotoImage
-
-            return PhotoImage(file=str(path))
-        except Exception:
-            return None
 
     def _default_ansible_command(self) -> str:
         if platform.system() == "Windows":
             return "wsl ansible-playbook"
         return "ansible-playbook"
 
-    def _configure_style(self) -> None:
-        style = ttk.Style(self.root)
-        if "clam" in style.theme_names():
-            style.theme_use("clam")
-        self.root.configure(bg="#f6f7fb")
-        default_font = ("Segoe UI", 10)
-        style.configure(".", font=default_font)
-        style.configure("TFrame", background="#f6f7fb")
-        style.configure("Panel.TFrame", background="#ffffff", relief="flat")
-        style.configure("Header.TFrame", background="#111827")
-        style.configure("HeaderTitle.TLabel", background="#111827", foreground="#ffffff", font=("Segoe UI", 24, "bold"))
-        style.configure("HeaderText.TLabel", background="#111827", foreground="#cbd5e1")
-        style.configure("TLabel", background="#f6f7fb", foreground="#111827")
-        style.configure("Panel.TLabel", background="#ffffff", foreground="#111827")
-        style.configure("Hint.TLabel", background="#ffffff", foreground="#64748b")
-        style.configure("TCheckbutton", background="#ffffff", foreground="#111827")
-        style.configure("TRadiobutton", background="#ffffff", foreground="#111827")
-        style.configure("TButton", padding=(11, 7))
-        style.configure("Accent.TButton", background="#2563eb", foreground="#ffffff", padding=(13, 8))
-        style.configure("Link.TButton", padding=(8, 5))
-        style.configure("Treeview", rowheight=26, font=("Segoe UI", 9))
-        style.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"))
-
     def _build_ui(self) -> None:
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(1, weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
 
-        header = ttk.Frame(self.root, padding=(22, 18, 22, 14), style="Header.TFrame")
-        header.grid(row=0, column=0, sticky="ew")
-        header.columnconfigure(1, weight=1)
-        header.columnconfigure(2, weight=0)
+        sidebar = ctk.CTkFrame(self.root, width=280, corner_radius=0, fg_color="#111827")
+        sidebar.grid(row=0, column=0, sticky="nsew")
+        sidebar.grid_rowconfigure(6, weight=1)
 
-        if getattr(self, "_icon_image", None) is not None:
-            ttk.Label(header, image=self._icon_image).grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, 14))
-        ttk.Label(header, text="Replibook", style="HeaderTitle.TLabel").grid(row=0, column=1, sticky="w")
-        ttk.Label(
+        ctk.CTkLabel(
+            sidebar,
+            text="Replibook",
+            font=ctk.CTkFont(size=30, weight="bold"),
+            text_color="#ffffff",
+        ).grid(row=0, column=0, sticky="w", padx=24, pady=(28, 4))
+        ctk.CTkLabel(
+            sidebar,
+            text=f"v{__version__} - {self.host_os}",
+            text_color="#9ca3af",
+        ).grid(row=1, column=0, sticky="w", padx=24)
+
+        ctk.CTkLabel(
+            sidebar,
+            text="Scan profiles",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#e5e7eb",
+        ).grid(row=2, column=0, sticky="w", padx=24, pady=(26, 8))
+
+        profiles_frame = ctk.CTkScrollableFrame(sidebar, fg_color="transparent", height=370)
+        profiles_frame.grid(row=3, column=0, sticky="nsew", padx=16)
+        for index, profile in enumerate(profile_choices()):
+            button = ctk.CTkButton(
+                profiles_frame,
+                text=f"{profile.label}\n{profile.description}",
+                anchor="w",
+                justify="left",
+                height=68,
+                corner_radius=10,
+                command=lambda key=profile.key: self._set_profile(key),
+            )
+            button.grid(row=index, column=0, sticky="ew", pady=5)
+            profiles_frame.grid_columnconfigure(0, weight=1)
+            self.profile_buttons[profile.key] = button
+
+        ctk.CTkButton(sidebar, text="GitHub", command=lambda: webbrowser.open(GITHUB_URL)).grid(
+            row=4, column=0, sticky="ew", padx=24, pady=(20, 8)
+        )
+        ctk.CTkButton(sidebar, text="Report a bug", fg_color="#374151", hover_color="#4b5563", command=lambda: webbrowser.open(BUG_REPORT_URL)).grid(
+            row=5, column=0, sticky="ew", padx=24
+        )
+
+        content = ctk.CTkFrame(self.root, fg_color="#f8fafc", corner_radius=0)
+        content.grid(row=0, column=1, sticky="nsew")
+        content.grid_columnconfigure(0, weight=1)
+        content.grid_rowconfigure(1, weight=1)
+
+        header = ctk.CTkFrame(content, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew", padx=28, pady=(24, 12))
+        header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
             header,
-            text=f"Role-oriented Ansible reproduction · detected backend: {self.host_os}",
-            style="HeaderText.TLabel",
-        ).grid(row=1, column=1, sticky="w")
-        support = ttk.Frame(header, style="Header.TFrame")
-        support.grid(row=0, column=2, rowspan=2, sticky="e")
-        ttk.Button(support, text="GitHub", style="Link.TButton", command=self._open_github).pack(side="left", padx=(0, 8))
-        ttk.Button(support, text="Report a bug", style="Link.TButton", command=self._open_bug_report).pack(side="left")
+            text="Role-oriented Ansible reproduction",
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color="#111827",
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            header,
+            text="Choose a practical scan profile, review the findings, then generate a playbook.",
+            text_color="#64748b",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
-        notebook = ttk.Notebook(self.root)
-        notebook.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 12))
-        notebook.add(self._scan_tab(notebook), text="Create")
-        notebook.add(self._apply_tab(notebook), text="Apply")
-        notebook.add(self._log_tab(notebook), text="Log")
+        tabs = ctk.CTkTabview(content, corner_radius=12)
+        tabs.grid(row=1, column=0, sticky="nsew", padx=28, pady=(0, 24))
+        self.create_tab = tabs.add("Create")
+        self.apply_tab = tabs.add("Apply")
+        self.log_tab = tabs.add("Log")
+        self._build_create_tab()
+        self._build_apply_tab()
+        self._build_log_tab()
+        self._set_profile(DEFAULT_SCAN_PROFILE)
 
-    def _open_github(self) -> None:
-        webbrowser.open("https://github.com/AlexRosbach/Replibook")
+    def _build_create_tab(self) -> None:
+        tab = self.create_tab
+        tab.grid_columnconfigure(0, weight=1)
+        tab.grid_columnconfigure(1, weight=1)
+        tab.grid_rowconfigure(1, weight=1)
 
-    def _open_bug_report(self) -> None:
-        webbrowser.open("https://github.com/AlexRosbach/Replibook/issues/new?template=bug_report.yml")
+        profile_card = ctk.CTkFrame(tab, corner_radius=12, fg_color="#ffffff")
+        profile_card.grid(row=0, column=0, columnspan=2, sticky="ew", padx=8, pady=(12, 10))
+        profile_card.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(profile_card, text="Active profile", font=ctk.CTkFont(size=16, weight="bold")).grid(
+            row=0, column=0, sticky="w", padx=18, pady=(16, 2)
+        )
+        self.active_profile_label = ctk.CTkLabel(profile_card, text="", text_color="#64748b", justify="left", anchor="w")
+        self.active_profile_label.grid(row=1, column=0, columnspan=2, sticky="ew", padx=18, pady=(0, 16))
 
-    def _scan_tab(self, parent: ttk.Notebook) -> ttk.Frame:
-        frame = ttk.Frame(parent, padding=18, style="Panel.TFrame")
-        frame.columnconfigure(1, weight=1)
+        modules_card = ctk.CTkFrame(tab, corner_radius=12, fg_color="#ffffff")
+        modules_card.grid(row=1, column=0, sticky="nsew", padx=(8, 10), pady=8)
+        modules_card.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(modules_card, text="Scanner modules", font=ctk.CTkFont(size=16, weight="bold")).grid(
+            row=0, column=0, sticky="w", padx=18, pady=(16, 8)
+        )
+        module_frame = ctk.CTkScrollableFrame(modules_card, fg_color="transparent")
+        module_frame.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
+        modules_card.grid_rowconfigure(1, weight=1)
+
         modules = module_labels(self.host_os if self.host_os in {"linux", "macos", "windows"} else "linux")
-
-        info = (
-            "This platform is not fully supported for local scans yet. Replibook will still generate a starter inventory."
-            if self.host_os == "unknown"
-            else "Select scanner modules, target settings and output location, then generate the playbook and inventory."
-        )
-        ttk.Label(frame, text=info, wraplength=860, style="Panel.TLabel").grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 12))
-
-        row = 1
-        ttk.Label(frame, text="Scan profile", style="Panel.TLabel").grid(row=row, column=0, sticky="w", pady=3, padx=(0, 12))
-        profile_box = ttk.Combobox(
-            frame,
-            textvariable=self.profile_var,
-            values=[profile.key for profile in profile_choices()],
-            state="readonly",
-        )
-        profile_box.grid(row=row, column=1, sticky="ew", pady=3)
-        profile_box.bind("<<ComboboxSelected>>", lambda _event: self._apply_profile())
-        ttk.Label(frame, text="Use Role reproduction for normal server/workstation rebuilds; Full audit is intentionally noisy.", style="Hint.TLabel").grid(
-            row=row + 1, column=1, columnspan=2, sticky="ew", pady=(0, 8)
-        )
-        row += 2
-
-        for key, (label, description, _) in modules.items():
+        for index, (key, (label, description, _)) in enumerate(modules.items()):
             var = BooleanVar(value=key in modules_for_profile(DEFAULT_SCAN_PROFILE, modules))
             self.module_vars[key] = var
-            ttk.Checkbutton(frame, text=label, variable=var).grid(row=row, column=0, sticky="nw", padx=(0, 12))
-            ttk.Label(frame, text=description, wraplength=640, style="Panel.TLabel").grid(row=row, column=1, columnspan=2, sticky="ew")
-            row += 1
+            row = ctk.CTkFrame(module_frame, fg_color="#f8fafc", corner_radius=10)
+            row.grid(row=index, column=0, sticky="ew", pady=5)
+            row.grid_columnconfigure(1, weight=1)
+            ctk.CTkCheckBox(row, text="", variable=var, width=26).grid(row=0, column=0, padx=(12, 4), pady=12)
+            ctk.CTkLabel(row, text=label, font=ctk.CTkFont(weight="bold"), anchor="w").grid(
+                row=0, column=1, sticky="ew", padx=(0, 12), pady=(10, 0)
+            )
+            ctk.CTkLabel(row, text=description, text_color="#64748b", anchor="w", justify="left", wraplength=380).grid(
+                row=1, column=1, sticky="ew", padx=(0, 12), pady=(0, 10)
+            )
+            module_frame.grid_columnconfigure(0, weight=1)
 
-        ttk.Separator(frame).grid(row=row, column=0, columnspan=3, sticky="ew", pady=12)
-        row += 1
-        self._entry_row(frame, row, "Output folder", self.output_dir, self._pick_output_dir)
-        row += 1
-
-        ttk.Label(frame, text="Target", style="Panel.TLabel").grid(row=row, column=0, sticky="w", pady=(10, 4))
-        target_frame = ttk.Frame(frame, style="Panel.TFrame")
-        target_frame.grid(row=row, column=1, columnspan=2, sticky="ew", pady=(10, 4))
-        ttk.Radiobutton(target_frame, text="Local", value="local", variable=self.target_connection).pack(side="left")
-        ttk.Radiobutton(target_frame, text="SSH", value="ssh", variable=self.target_connection).pack(side="left", padx=(12, 0))
-        row += 1
-
-        self._entry_row(frame, row, "Inventory name", self.target_name)
-        row += 1
-        self._entry_row(frame, row, "SSH host/IP", self.target_host)
-        row += 1
-        self._entry_row(frame, row, "SSH user", self.target_user)
-        row += 1
-        self._entry_row(frame, row, "SSH port", self.target_port)
-        row += 1
-        self._entry_row(frame, row, "SSH key", self.target_key, self._pick_target_key)
-        row += 1
-        ttk.Checkbutton(frame, text="Use sudo/become in generated playbook", variable=self.target_become).grid(
-            row=row, column=1, sticky="w", pady=(4, 10)
+        settings_card = ctk.CTkFrame(tab, corner_radius=12, fg_color="#ffffff")
+        settings_card.grid(row=1, column=1, sticky="nsew", padx=(10, 8), pady=8)
+        settings_card.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(settings_card, text="Target and output", font=ctk.CTkFont(size=16, weight="bold")).grid(
+            row=0, column=0, columnspan=3, sticky="w", padx=18, pady=(16, 10)
         )
-        row += 1
-        ttk.Button(frame, text="Generate", command=self.generate_playbook, style="Accent.TButton").grid(row=row, column=1, sticky="w")
-        return frame
-
-    def _apply_tab(self, parent: ttk.Notebook) -> ttk.Frame:
-        frame = ttk.Frame(parent, padding=18, style="Panel.TFrame")
-        frame.columnconfigure(1, weight=1)
-
-        ttk.Label(
-            frame,
-            text="Select a generated playbook and inventory. On Windows, use WSL or another Ansible-capable command.",
-            wraplength=780,
-            style="Panel.TLabel",
-        ).grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 12))
-
-        self._entry_row(frame, 1, "Playbook", self.playbook_path, self._pick_playbook)
-        self._entry_row(frame, 2, "Inventory", self.inventory_path, self._pick_inventory)
-        self._entry_row(frame, 3, "Ansible command", self.ansible_command)
-        ttk.Checkbutton(frame, text="Dry-run first (--check)", variable=self.apply_check).grid(row=4, column=1, sticky="w")
-        ttk.Checkbutton(frame, text="Allow network-sensitive playbooks", variable=self.confirm_network).grid(
-            row=5, column=1, sticky="w"
+        self._entry_row(settings_card, 1, "Output folder", self.output_dir, self._pick_output_dir)
+        self._segmented_row(settings_card, 2, "Target", self.target_connection, ("local", "ssh"))
+        self._entry_row(settings_card, 3, "Inventory name", self.target_name)
+        self._entry_row(settings_card, 4, "SSH host/IP", self.target_host)
+        self._entry_row(settings_card, 5, "SSH user", self.target_user)
+        self._entry_row(settings_card, 6, "SSH port", self.target_port)
+        self._entry_row(settings_card, 7, "SSH key", self.target_key, self._pick_target_key)
+        ctk.CTkCheckBox(settings_card, text="Use sudo/become in generated playbook", variable=self.target_become).grid(
+            row=8, column=1, sticky="w", padx=8, pady=(8, 16)
         )
-        ttk.Button(frame, text="Run Ansible", command=self.apply_playbook, style="Accent.TButton").grid(row=6, column=1, sticky="w", pady=(12, 0))
-        return frame
+        ctk.CTkButton(settings_card, text="Generate playbook", height=42, command=self.generate_playbook).grid(
+            row=9, column=1, sticky="ew", padx=8, pady=(4, 18)
+        )
 
-    def _log_tab(self, parent: ttk.Notebook) -> ttk.Frame:
-        frame = ttk.Frame(parent, padding=18, style="Panel.TFrame")
-        frame.columnconfigure(0, weight=1)
-        frame.rowconfigure(0, weight=1)
-        self.log = ttk.Treeview(frame, columns=("message",), show="headings")
-        self.log.heading("message", text="Message")
-        self.log.grid(row=0, column=0, sticky="nsew")
-        return frame
+    def _build_apply_tab(self) -> None:
+        tab = self.apply_tab
+        tab.grid_columnconfigure(0, weight=1)
+        card = ctk.CTkFrame(tab, corner_radius=12, fg_color="#ffffff")
+        card.grid(row=0, column=0, sticky="nsew", padx=8, pady=12)
+        card.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(card, text="Apply generated playbook", font=ctk.CTkFont(size=18, weight="bold")).grid(
+            row=0, column=0, columnspan=3, sticky="w", padx=18, pady=(18, 4)
+        )
+        ctk.CTkLabel(
+            card,
+            text="On Windows, use WSL or another Ansible-capable command.",
+            text_color="#64748b",
+        ).grid(row=1, column=0, columnspan=3, sticky="w", padx=18, pady=(0, 12))
+        self._entry_row(card, 2, "Playbook", self.playbook_path, self._pick_playbook)
+        self._entry_row(card, 3, "Inventory", self.inventory_path, self._pick_inventory)
+        self._entry_row(card, 4, "Ansible command", self.ansible_command)
+        ctk.CTkCheckBox(card, text="Dry-run first (--check)", variable=self.apply_check).grid(
+            row=5, column=1, sticky="w", padx=8, pady=6
+        )
+        ctk.CTkCheckBox(card, text="Allow network-sensitive playbooks", variable=self.confirm_network).grid(
+            row=6, column=1, sticky="w", padx=8, pady=6
+        )
+        ctk.CTkButton(card, text="Run Ansible", height=42, command=self.apply_playbook).grid(
+            row=7, column=1, sticky="ew", padx=8, pady=(14, 18)
+        )
+
+    def _build_log_tab(self) -> None:
+        self.log = ctk.CTkTextbox(self.log_tab, corner_radius=12, font=("Consolas", 11), wrap="word")
+        self.log.grid(row=0, column=0, sticky="nsew", padx=8, pady=12)
+        self.log_tab.grid_columnconfigure(0, weight=1)
+        self.log_tab.grid_rowconfigure(0, weight=1)
 
     def _entry_row(
         self,
-        frame: ttk.Frame,
+        frame: ctk.CTkFrame,
         row: int,
         label: str,
         value: StringVar,
         picker: Callable[[], None] | None = None,
     ) -> None:
-        ttk.Label(frame, text=label, style="Panel.TLabel").grid(row=row, column=0, sticky="w", pady=3, padx=(0, 12))
-        ttk.Entry(frame, textvariable=value).grid(row=row, column=1, sticky="ew", pady=3)
+        ctk.CTkLabel(frame, text=label, anchor="w").grid(row=row, column=0, sticky="w", padx=(18, 8), pady=7)
+        ctk.CTkEntry(frame, textvariable=value).grid(row=row, column=1, sticky="ew", padx=8, pady=7)
         if picker:
-            ttk.Button(frame, text="Browse", command=picker).grid(row=row, column=2, sticky="w", padx=(8, 0), pady=3)
+            ctk.CTkButton(frame, text="Browse", width=92, command=picker).grid(row=row, column=2, sticky="e", padx=(8, 18), pady=7)
+
+    def _segmented_row(self, frame: ctk.CTkFrame, row: int, label: str, value: StringVar, values: tuple[str, ...]) -> None:
+        ctk.CTkLabel(frame, text=label, anchor="w").grid(row=row, column=0, sticky="w", padx=(18, 8), pady=7)
+        ctk.CTkSegmentedButton(frame, values=list(values), variable=value).grid(row=row, column=1, sticky="ew", padx=8, pady=7)
 
     def _pick_output_dir(self) -> None:
         if selected := filedialog.askdirectory(initialdir=self.output_dir.get() or str(Path.cwd())):
@@ -265,33 +299,65 @@ class ReplibookDesktop:
         if selected := filedialog.askopenfilename(filetypes=[("Inventory", "*.ini"), ("All files", "*.*")]):
             self.inventory_path.set(selected)
 
-    def _apply_profile(self) -> None:
+    def _set_profile(self, key: str) -> None:
+        self.profile_var.set(key)
         modules = module_labels(self.host_os if self.host_os in {"linux", "macos", "windows"} else "linux")
-        selected = set(modules_for_profile(self.profile_var.get(), modules))
-        for key, var in self.module_vars.items():
-            var.set(key in selected)
+        selected = set(modules_for_profile(key, modules))
+        for module_key, var in self.module_vars.items():
+            var.set(module_key in selected)
+
+        profile = SCAN_PROFILES[key]
+        self.active_profile_label.configure(
+            text=f"{profile.label}: {profile.description}\nModules: {', '.join(selected)}"
+        )
+        for profile_key, button in self.profile_buttons.items():
+            if profile_key == key:
+                button.configure(fg_color="#2563eb", hover_color="#1d4ed8")
+            else:
+                button.configure(fg_color="#1f2937", hover_color="#374151")
 
     def _target(self) -> TargetConfig:
-        if self.target_connection.get() == "ssh":
+        return self._target_from_values(
+            self.target_connection.get(),
+            self.target_name.get(),
+            self.target_host.get(),
+            self.target_user.get(),
+            self.target_port.get(),
+            self.target_key.get(),
+        )
+
+    def _target_from_values(
+        self,
+        connection: str,
+        name: str,
+        host: str,
+        user: str,
+        port: str,
+        identity_file: str,
+    ) -> TargetConfig:
+        if connection == "ssh":
             return TargetConfig(
-                name=self.target_name.get().strip() or "target",
+                name=name.strip() or "target",
                 connection="ssh",
-                host=self.target_host.get().strip(),
-                user=self.target_user.get().strip() or None,
-                port=int(self.target_port.get().strip() or "22"),
-                identity_file=self.target_key.get().strip() or None,
+                host=host.strip(),
+                user=user.strip() or None,
+                port=int(port.strip() or "22"),
+                identity_file=identity_file.strip() or None,
             )
-        return TargetConfig(name=self.target_name.get().strip() or "localhost")
+        return TargetConfig(name=name.strip() or "localhost")
 
     def _append_log(self, message: str) -> None:
-        self.log.insert("", "end", values=(message,))
-        self.log.yview_moveto(1)
+        self.log.insert("end", message + "\n")
+        self.log.see("end")
 
     def generate_playbook(self) -> None:
         selected = [key for key, var in self.module_vars.items() if var.get()]
         if not selected and self.host_os != "unknown":
             messagebox.showerror("Replibook", "Select at least one scanner module.")
             return
+        output_dir_value = self.output_dir.get()
+        target = self._target()
+        use_become = self.target_become.get()
 
         def worker() -> None:
             try:
@@ -302,7 +368,7 @@ class ReplibookDesktop:
                         selected,
                         on_progress=lambda msg: self.root.after(0, self._append_log, msg),
                     )
-                    output_dir = Path(self.output_dir.get())
+                    output_dir = Path(output_dir_value)
                     snapshot_path = save_snapshot(scan_results, output_dir / "replibook-scan.json")
                     review_path = write_review_report(scan_results, output_dir)
                     preview_lines = [
@@ -329,9 +395,9 @@ class ReplibookDesktop:
                         return
                 playbook, inventory = write_generated_playbook(
                     scan_results,
-                    self.output_dir.get(),
-                    target=self._target(),
-                    use_become=self.target_become.get(),
+                    output_dir_value,
+                    target=target,
+                    use_become=use_become,
                 )
                 self.root.after(0, self.playbook_path.set, playbook)
                 self.root.after(0, self.inventory_path.set, inventory)
@@ -355,11 +421,13 @@ class ReplibookDesktop:
             return
         if not messagebox.askyesno("Replibook", "Run Ansible with the selected files?"):
             return
+        ansible_command = self.ansible_command.get()
+        apply_check = self.apply_check.get()
 
         def worker() -> None:
             try:
-                command = _split_command(self.ansible_command.get()) + ["-i", str(inventory), str(playbook)]
-                if self.apply_check.get():
+                command = _split_command(ansible_command) + ["-i", str(inventory), str(playbook)]
+                if apply_check:
                     command.append("--check")
                 self.root.after(0, self._append_log, "Running: " + " ".join(command))
                 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

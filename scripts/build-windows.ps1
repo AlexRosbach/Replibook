@@ -16,6 +16,8 @@ Set-Location $repoRoot
     --windowed `
     --name Replibook `
     --icon replibook/assets/replibook-icon.ico `
+    --collect-data customtkinter `
+    --exclude-module darkdetect._mac_detect `
     --add-data "replibook/assets;replibook/assets" `
     --add-data "replibook/generator/templates;replibook/generator/templates" `
     replibook/gui/app.py

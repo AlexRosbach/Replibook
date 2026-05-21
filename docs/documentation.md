@@ -133,6 +133,12 @@ replibook scan --profile role --output ./playbooks
 # Terminal server style scan: system, programs, services, tasks and network context
 replibook scan --profile terminal_server --output ./playbooks
 
+# Other practical role scans
+replibook scan --profile workstation --output ./playbooks
+replibook scan --profile web_server --output ./playbooks
+replibook scan --profile database_server --output ./playbooks
+replibook scan --profile automation_node --output ./playbooks
+
 # Container-focused host scan
 replibook scan --profile container_host --output ./playbooks
 
@@ -240,6 +246,10 @@ Profiles keep Replibook useful for real rebuild work instead of collecting every
 |---|---|---|
 | `role` | Default rebuild/documentation scan for a configured server or workstation | system, packages/programs, services, scheduled tasks, network |
 | `terminal_server` | Reproduce terminal-server style hosts from an existing configured machine | system, packages/programs, services, scheduled tasks, network |
+| `workstation` | Reproduce a configured desktop or admin workstation | system, packages/programs, services, scheduled tasks, network |
+| `web_server` | Reproduce a web host, including optional container workloads | system, packages/programs, services, scheduled tasks, Docker, Compose, network |
+| `database_server` | Reproduce database-oriented hosts while keeping data backup as a separate step | system, packages/programs, services, scheduled tasks, network |
+| `automation_node` | Reproduce automation hosts such as schedulers, deployment nodes or lab runners | system, packages/programs, services, scheduled tasks, Docker, Compose, network |
 | `container_host` | Reproduce Docker-heavy hosts | system, packages/programs, services, Docker, Compose, network |
 | `full` | Discovery/audit mode when you intentionally want everything | all available modules |
 

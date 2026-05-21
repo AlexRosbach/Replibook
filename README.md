@@ -36,7 +36,7 @@ Works on **Linux** (apt + systemd), **macOS** (Homebrew), and **Windows** (insta
 - Docker container scanning via the Docker SDK
 - Docker Compose deployment discovery
 - Ansible playbook and matching inventory generation
-- Role-oriented scan profiles for practical reproduction workflows
+- Role-oriented scan profiles for practical reproduction workflows, including workstation, web server, database server, automation node, terminal server, container host and full audit
 - Guided CLI with explained profile and module prompts
 - Local and SSH target inventory configuration
 - Optional guided `apply` command for generated playbooks, including Ansible dependency setup
@@ -162,6 +162,12 @@ replibook scan --profile role --output ./playbooks
 
 # Terminal server style scan: system, programs, services, tasks and network context
 replibook scan --profile terminal_server --output ./playbooks
+
+# Other role-oriented scans
+replibook scan --profile web_server --output ./playbooks
+replibook scan --profile database_server --output ./playbooks
+replibook scan --profile workstation --output ./playbooks
+replibook scan --profile automation_node --output ./playbooks
 
 # Run selected scanner modules without prompts
 replibook scan --modules system,network,scheduled_tasks --output ./playbooks

@@ -93,9 +93,9 @@ class PlaybookGenerator:
         )
 
         playbook_file = self.output_dir / f"{hostname}_playbook.yml"
-        playbook_file.write_text(playbook)
+        playbook_file.write_text(playbook, encoding="utf-8")
 
         inventory_file = self.output_dir / "inventory.ini"
-        inventory_file.write_text(f"[replibook]\n{target.inventory_line()}\n")
+        inventory_file.write_text(f"[replibook]\n{target.inventory_line()}\n", encoding="utf-8")
 
         return str(playbook_file), str(inventory_file)

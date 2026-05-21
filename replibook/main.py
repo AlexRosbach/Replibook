@@ -83,7 +83,10 @@ def _profile_option() -> str | None:
     return typer.Option(
         None,
         "--profile",
-        help=f"Scan profile to use instead of --all, e.g. role, terminal_server, container_host, full. Default guided profile: {DEFAULT_SCAN_PROFILE}",
+        help=(
+            "Scan profile to use instead of --all, e.g. role, workstation, web_server, "
+            f"database_server, terminal_server, automation_node, container_host, full. Default guided profile: {DEFAULT_SCAN_PROFILE}"
+        ),
     )
 
 

@@ -9,9 +9,9 @@ All notable changes to Replibook are documented here.
 ### Added
 - Hardened Windows EXE build script validation so `scripts/build-windows.ps1` fails when `dist/Replibook.exe` is not created.
 - Windows EXE packaging now includes generator templates so `Replibook.exe` can generate playbooks without missing `site.yml.j2`.
-- Role-oriented scan profiles (`role`, `terminal_server`, `container_host`, `full`) for useful reproduction scans without default Docker/Compose noise.
+- Role-oriented scan profiles (`role`, `workstation`, `web_server`, `database_server`, `terminal_server`, `automation_node`, `container_host`, `full`) for useful reproduction scans without default Docker/Compose noise.
 - GitHub and bug-report links in the desktop app, plus CLI output hints for Linux/macOS/Windows users.
-- Cleaner desktop layout with scan profiles and modernized spacing/styles.
+- CustomTkinter desktop UI with modern sidebar profile selection, cleaner cards, rounded controls and improved log view.
 - Review preview and safety classification for generated playbook sections, including a `replibook-review.json` sidecar report.
 - Optional section exclusion after scanning via interactive prompts or `--exclude-sections`.
 - Scan snapshot export via `--save-snapshot` and `replibook diff` for drift comparison between two snapshots.
@@ -29,6 +29,7 @@ All notable changes to Replibook are documented here.
 
 ### Fixed
 - Addressed Copilot review findings for Windows service `StartMode`, Tkinter availability, Ansible runner error reporting, scan-module validation, OS docstrings and generic no-result messages.
+- Fixed Windows `charmap` failures while generating playbooks by writing generated playbook and inventory files as UTF-8.
 
 ---
 
