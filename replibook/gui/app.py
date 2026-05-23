@@ -352,7 +352,7 @@ class ReplibookDesktop:
 
     def generate_playbook(self) -> None:
         selected = [key for key, var in self.module_vars.items() if var.get()]
-        if not selected and self.host_os != "unknown":
+        if not selected:
             messagebox.showerror("Replibook", "Select at least one scanner module.")
             return
         output_dir_value = self.output_dir.get()
@@ -362,37 +362,35 @@ class ReplibookDesktop:
         def worker() -> None:
             try:
                 self.root.after(0, self._append_log, "Generating playbook...")
-                scan_results = {}
-                if self.host_os != "unknown":
-                    scan_results = scan_selected_modules(
-                        selected,
-                        on_progress=lambda msg: self.root.after(0, self._append_log, msg),
+                scan_results = scan_selected_modules(
+                    selected,
+                    on_progress=lambda msg: self.root.after(0, self._append_log, msg),
+                )
+                output_dir = Path(output_dir_value)
+                snapshot_path = save_snapshot(scan_results, output_dir / "replibook-scan.json")
+                review_path = write_review_report(scan_results, output_dir)
+                preview_lines = [
+                    f"{row['label']}: {row['count']} item(s), safety={row['safety']}"
+                    for row in summarize_scan(scan_results)
+                ]
+                preview_text = "\n".join(preview_lines) or "No scanner results found."
+                self.root.after(0, self._append_log, f"Scan snapshot written: {snapshot_path}")
+                self.root.after(0, self._append_log, f"Review report written: {review_path}")
+                decision = {"continue": False}
+                event = threading.Event()
+
+                def ask_review() -> None:
+                    decision["continue"] = messagebox.askyesno(
+                        "Replibook review preview",
+                        preview_text + "\n\nGenerate playbook from this scan?",
                     )
-                    output_dir = Path(output_dir_value)
-                    snapshot_path = save_snapshot(scan_results, output_dir / "replibook-scan.json")
-                    review_path = write_review_report(scan_results, output_dir)
-                    preview_lines = [
-                        f"{row['label']}: {row['count']} item(s), safety={row['safety']}"
-                        for row in summarize_scan(scan_results)
-                    ]
-                    preview_text = "\n".join(preview_lines) or "No scanner results found."
-                    self.root.after(0, self._append_log, f"Scan snapshot written: {snapshot_path}")
-                    self.root.after(0, self._append_log, f"Review report written: {review_path}")
-                    decision = {"continue": False}
-                    event = threading.Event()
+                    event.set()
 
-                    def ask_review() -> None:
-                        decision["continue"] = messagebox.askyesno(
-                            "Replibook review preview",
-                            preview_text + "\n\nGenerate playbook from this scan?",
-                        )
-                        event.set()
-
-                    self.root.after(0, ask_review)
-                    event.wait()
-                    if not decision["continue"]:
-                        self.root.after(0, self._append_log, "Generation cancelled after review preview.")
-                        return
+                self.root.after(0, ask_review)
+                event.wait()
+                if not decision["continue"]:
+                    self.root.after(0, self._append_log, "Generation cancelled after review preview.")
+                    return
                 playbook, inventory = write_generated_playbook(
                     scan_results,
                     output_dir_value,
