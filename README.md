@@ -8,8 +8,11 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-0ea5e9)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows%20App-22c55e)](docs/documentation.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
+[![Follow on X](https://img.shields.io/badge/X-@itneedtoknow-000000)](https://x.com/itneedtoknow)
 
 Replibook takes a snapshot of what's installed and running on your machine — packages, services, Docker containers, Compose deployments — and turns it into a ready-to-use Ansible playbook that recreates the same setup on another host.
+
+Project updates, release notes, and occasional build notes are posted on [X / @itneedtoknow](https://x.com/itneedtoknow).
 
 Works on **Linux** (apt + systemd), **macOS** (Homebrew), and **Windows** (installed programs, services, network settings and scheduled tasks as review-first inventory). The Windows desktop app provides a branded UI for creating and applying playbooks through an Ansible-capable backend such as WSL.
 
