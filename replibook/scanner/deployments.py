@@ -5,6 +5,7 @@ from replibook.utils import detect_os
 
 _LINUX_ROOTS = ["/opt", "/srv", "/home", "/root", "/docker", "/var/lib"]
 _MACOS_ROOTS = ["/Users", "/opt", "/usr/local"]
+_WINDOWS_ROOTS = ["C:\\Docker", "C:\\Projects", os.path.expanduser("~")]
 _COMPOSE_NAMES = {"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"}
 _SKIP_DIRS = {
     ".git", ".venv", "venv", "env", "node_modules", "__pycache__",
@@ -15,7 +16,13 @@ _SKIP_DIRS = {
 
 class DeploymentScanner(BaseScanner):
     def scan(self) -> list[ComposeDeployment]:
-        roots = _MACOS_ROOTS if detect_os() == "macos" else _LINUX_ROOTS
+        os_name = detect_os()
+        if os_name == "macos":
+            roots = _MACOS_ROOTS
+        elif os_name == "windows":
+            roots = _WINDOWS_ROOTS
+        else:
+            roots = _LINUX_ROOTS
         found_dirs: set[str] = set()
         deployments = []
 

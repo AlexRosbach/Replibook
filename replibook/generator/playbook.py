@@ -1,10 +1,12 @@
 import socket
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
+from replibook.review import build_review_report
 from replibook.utils import detect_os
 
 
@@ -45,7 +47,10 @@ class PlaybookGenerator:
         self.output_dir = Path(output_dir)
         self.target = target
         self.use_become = use_become
-        template_dir = Path(__file__).parent / "templates"
+        self.review_report_path: str | None = None
+        frozen_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
+        frozen_template_dir = frozen_root / "replibook" / "generator" / "templates"
+        template_dir = frozen_template_dir if frozen_template_dir.exists() else Path(__file__).parent / "templates"
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             trim_blocks=True,
@@ -71,19 +76,26 @@ class PlaybookGenerator:
             timestamp=timestamp,
             host_os=host_os,
             use_become=use_become,
+            review_report=build_review_report(self.scan_results),
+            review_report_path=self.review_report_path,
+            system_configs=self.scan_results.get("system", []),
+            scheduled_tasks=self.scan_results.get("scheduled_tasks", []),
             apt_packages=[p for p in packages if p.manager == "apt"],
             brew_packages=[p for p in packages if p.manager == "homebrew"],
             cask_packages=[p for p in packages if p.manager == "homebrew_cask"],
+            windows_packages=[p for p in packages if p.manager.startswith("windows")],
             systemd_services=[s for s in services if s.manager == "systemd"],
             brew_services=[s for s in services if s.manager == "homebrew"],
+            windows_services=[s for s in services if s.manager == "windows"],
             containers=self.scan_results.get("docker", []),
             deployments=self.scan_results.get("deployments", []),
+            network_interfaces=self.scan_results.get("network", []),
         )
 
         playbook_file = self.output_dir / f"{hostname}_playbook.yml"
-        playbook_file.write_text(playbook)
+        playbook_file.write_text(playbook, encoding="utf-8")
 
         inventory_file = self.output_dir / "inventory.ini"
-        inventory_file.write_text(f"[replibook]\n{target.inventory_line()}\n")
+        inventory_file.write_text(f"[replibook]\n{target.inventory_line()}\n", encoding="utf-8")
 
         return str(playbook_file), str(inventory_file)

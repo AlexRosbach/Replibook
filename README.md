@@ -4,14 +4,19 @@
 
 **Scan a server. Generate an Ansible playbook. Reproduce it anywhere.**
 
-[![Version](https://img.shields.io/badge/version-1.0.1-6366f1)](https://github.com/AlexRosbach/Replibook/releases/tag/v1.0.1)
+[![Version](https://img.shields.io/badge/version-1.1.0-6366f1)](https://github.com/AlexRosbach/Replibook/releases/tag/v1.1.0)
 [![Python](https://img.shields.io/badge/python-3.10%2B-0ea5e9)](https://www.python.org/)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-22c55e)](docs/documentation.md)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows%20App-22c55e)](docs/documentation.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
+[![Follow on X](https://img.shields.io/badge/X-@itneedtoknow-000000)](https://x.com/itneedtoknow)
 
 Replibook takes a snapshot of what's installed and running on your machine — packages, services, Docker containers, Compose deployments — and turns it into a ready-to-use Ansible playbook that recreates the same setup on another host.
 
-Works on **Linux** (apt + systemd) and **macOS** (Homebrew). Auto-detects which one you're on.
+Project updates, release notes, and occasional build notes are posted on [X / @itneedtoknow](https://x.com/itneedtoknow).
+
+Works on **Linux** (apt + systemd), **macOS** (Homebrew), and **Windows** (installed programs, services, network settings and scheduled tasks as review-first inventory). The Windows desktop app provides a branded UI for creating and applying playbooks through an Ansible-capable backend such as WSL.
+
+<img src="replibook/assets/replibook-logo-light.png" alt="Replibook logo" width="520">
 
 </div>
 
@@ -24,15 +29,24 @@ Works on **Linux** (apt + systemd) and **macOS** (Homebrew). Auto-detects which 
 
 ## Features
 
-- Automatic OS detection for Linux and macOS
+- Automatic OS detection for Linux, macOS and Windows
+- System configuration scanning for hostname, timezone and locale
+- Network configuration scanning for interfaces, addresses, gateway and DNS
+- Scheduled task scanning for cron, `/etc/cron.*` and macOS launchd plist locations
+- Windows scanning for installed programs, services, network configuration and Task Scheduler entries
 - Package scanning for apt/dpkg and Homebrew
 - Service scanning for systemd and Homebrew services
 - Docker container scanning via the Docker SDK
 - Docker Compose deployment discovery
 - Ansible playbook and matching inventory generation
-- Guided CLI with explained module prompts
+- Role-oriented scan profiles for practical reproduction workflows, including workstation, web server, database server, automation node, terminal server, container host and full audit
+- Guided CLI with explained profile and module prompts
 - Local and SSH target inventory configuration
 - Optional guided `apply` command for generated playbooks, including Ansible dependency setup
+- Windows desktop app (`Replibook.exe`) for local scanning, playbook creation and applying playbooks through WSL or another Ansible command
+- Commander-friendly CLI controls for automation, including module listing and comma-separated scanner selection
+- Review preview with safety classes before playbook generation
+- Optional scan snapshots and drift comparison via `replibook diff`
 
 ---
 
@@ -51,12 +65,12 @@ Use the Knowledge Base for common setup problems and generated-playbook warnings
 ### 1. Install
 
 ```bash
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 > No `pipx`? Install it once: `brew install pipx` (macOS) or `apt install pipx` (Linux).
 >
-> To install a different release tag, replace `@v1.0.1` in the command above.
+> To install a different release tag, replace `@v1.1.0` in the command above.
 > To install the latest development version instead, omit the `@<tag>` suffix.
 
 ### 2. Run it
@@ -66,6 +80,7 @@ replibook
 ```
 
 That's it. The interactive menu guides you through:
+- Choosing whether you want to scan or apply an existing playbook
 - Selecting what to scan, with a short explanation for each module
 - Confirming where to save the playbook (default: `./playbooks`)
 - Choosing whether the inventory should target the local machine or another host over SSH
@@ -94,20 +109,39 @@ replibook apply myserver_playbook.yml --inventory inventory.ini --install-deps
 
 Replibook shows the selected playbook and inventory before handing off to `ansible-playbook`. If a playbook appears to contain network settings, Replibook asks for an extra confirmation because a bad network change can break remote access.
 
+### Windows desktop app
+
+Download `Replibook.exe` from release assets when a Windows build is published. Developers can build the same executable with `scripts/build-windows.ps1`; the script fails if `dist\Replibook.exe` is not created.
+
+The app keeps the Python backend intact and adds a desktop UI for:
+- creating a playbook and inventory from the shared generator backend
+- scanning Linux, macOS or Windows with platform-specific scanners and role-oriented profiles
+- applying playbooks from Windows through `wsl ansible-playbook` or a custom Ansible command
+- opening the GitHub repository or bug report form directly from the app
+
+Windows items that do not expose a reliable unattended installer command are still shown as review facts in the generated playbook instead of being silently dropped.
+
 ---
 
 ## What gets scanned
 
-Replibook detects your OS and picks the right tools automatically:
+Replibook detects your OS and picks the right tools automatically. The default scan is **Role reproduction**, which is meant for rebuilding a configured host without scanning unrelated Docker/Compose state. Use **Container host** or **Full audit** when that extra inventory is actually relevant.
 
-| Module | Linux | macOS |
-|---|---|---|
-| **Packages** | `apt-mark` / `dpkg` | `brew` formulas + casks |
-| **Services** | `systemctl` (enabled + active) | `brew services` |
-| **Docker** | Docker socket | Docker Desktop socket |
-| **Compose** | `/opt`, `/srv`, `/home`, `/root`, `/docker` | `/Users`, `/opt`, `/usr/local` |
+| Module | Linux | macOS | Windows |
+|---|---|---|---|
+| **System** | hostname, timezone, locale | hostname, timezone, locale | hostname, timezone, locale |
+| **Network** | `ip`, `resolvectl`, optional `nmcli` | `networksetup` | `Get-NetIPConfiguration` |
+| **Scheduled Tasks** | user crontab, `/etc/crontab`, `/etc/cron.d`, periodic cron directories | user crontab, LaunchAgents, LaunchDaemons | non-Microsoft Task Scheduler entries |
+| **Packages** | `apt-mark` / `dpkg` | `brew` formulas + casks | installed-program registry inventory |
+| **Services** | `systemctl` (enabled + active) | `brew services` | running and automatic Windows services |
+| **Docker** | Docker socket | Docker Desktop socket | Docker Desktop socket |
+| **Compose** | `/opt`, `/srv`, `/home`, `/root`, `/docker` | `/Users`, `/opt`, `/usr/local` | `C:\Docker`, `C:\Projects`, user profile |
 
 If a tool isn't present (e.g. no Docker, no Homebrew), that module just returns nothing — no errors.
+
+Network tasks are generated conservatively. Replibook records the discovered configuration and emits disabled NetworkManager example tasks when enough information is available. Review and explicitly enable network tasks before applying them.
+Scheduled tasks are also generated conservatively. Replibook records cron and launchd entries for review, and cron recreation tasks are disabled until you explicitly enable them.
+Windows programs and some scheduler details are represented as review-first facts when there is no safe generic Ansible install task.
 
 ---
 
@@ -119,6 +153,39 @@ replibook
 
 # Skip the menu, scan everything
 replibook --all
+
+# List automation-friendly scanner keys
+replibook modules
+
+# List practical scan profiles
+replibook profiles
+
+# Role-oriented scan for rebuilding a configured server/workstation
+replibook scan --profile role --output ./playbooks
+
+# Terminal server style scan: system, programs, services, tasks and network context
+replibook scan --profile terminal_server --output ./playbooks
+
+# Other role-oriented scans
+replibook scan --profile web_server --output ./playbooks
+replibook scan --profile database_server --output ./playbooks
+replibook scan --profile workstation --output ./playbooks
+replibook scan --profile automation_node --output ./playbooks
+
+# Run selected scanner modules without prompts
+replibook scan --modules system,network,scheduled_tasks --output ./playbooks
+
+# Exclude generated sections after scan review
+replibook scan --all --exclude-sections network,scheduled_tasks
+
+# Save raw scan data for review or drift comparison
+replibook scan --all --save-snapshot ./snapshots/server-a.json
+
+# Compare two snapshots
+replibook diff ./snapshots/server-a-before.json ./snapshots/server-a-after.json
+
+# Print a remote scan workflow for SSH targets
+replibook remote-recipe server-a.example.com --user admin
 
 # Custom output directory
 replibook --all --output /opt/playbooks
@@ -148,7 +215,7 @@ Interactive run:
 
 ```
 ╭─────────────────────────────────────────────────────╮
-│  Replibook v1.0.1                                   │
+│  Replibook v1.1.0                                   │
 │  Ansible Playbook Generator · detected: macos       │
 ╰─────────────────────────────────────────────────────╯
 
@@ -251,9 +318,10 @@ replibook/
 |---|---|
 | `main.py` | Typer CLI entry point |
 | `cli.py` | Interactive menu, scan orchestration |
-| `scanner/` | One module per scan domain — auto-detects Linux vs macOS |
+| `profiles.py` | Role-oriented scan profiles such as role reproduction, terminal server, container host and full audit |
+| `scanner/` | One module per scan domain — auto-detects Linux, macOS and Windows |
 | `generator/playbook.py` | Renders scan results into Ansible YAML via Jinja2 |
-| `utils/os_detect.py` | Returns `linux` / `macos` |
+| `utils/os_detect.py` | Returns `linux` / `macos` / `windows` / `unknown` |
 
 **Dependencies:** Python 3.10+, Typer, Rich, questionary, Jinja2, docker-py
 

@@ -6,11 +6,71 @@
   hosts: replibook
   become: {{ "true" if use_become else "false" }}
   tasks:
-{% set has_any = apt_packages or brew_packages or cask_packages or systemd_services or brew_services or containers or deployments %}
+    # ── Review Summary ───────────────────────────────────────────────────────
+    - name: Review Replibook safety summary
+      ansible.builtin.debug:
+        msg:
+{% for section in review_report.sections %}
+          - "{{ section.label }}: {{ section.count }} item(s), safety={{ section.safety }} — {{ section.reason }}"
+{% endfor %}
+
+{% if review_report.backup_hints %}
+    - name: Review backup and migration notes
+      ansible.builtin.debug:
+        msg:
+{% for hint in review_report.backup_hints %}
+          - {{ hint | tojson }}
+{% endfor %}
+
+{% endif %}
+{% if review_report_path %}
+    - name: Review report file
+      ansible.builtin.debug:
+        msg: "Detailed Replibook review report was written to {{ review_report_path }}"
+
+{% endif %}
+{% set has_any = system_configs or apt_packages or brew_packages or cask_packages or windows_packages or systemd_services or brew_services or windows_services or scheduled_tasks or containers or deployments or network_interfaces %}
 {% if not has_any %}
     - name: Replibook scan returned no results
       ansible.builtin.debug:
-        msg: "No packages, services, containers or deployments were found on the source host."
+        msg: "No selected scanner modules returned reproducible results on the source host."
+{% endif %}
+
+{% if system_configs %}
+    # ── System Configuration ──────────────────────────────────────────────────
+{% for syscfg in system_configs %}
+{% if host_os == "windows" %}
+    - name: Review Windows system configuration
+      ansible.builtin.debug:
+        msg:
+          hostname: {{ syscfg.hostname | tojson }}
+          timezone: {{ syscfg.timezone | tojson }}
+          locale: {{ syscfg.locale | tojson }}
+
+    - name: Configure Windows hostname
+      ansible.windows.win_hostname:
+        name: {{ syscfg.hostname | tojson }}
+      when: false  # Enable only after confirming the target reboot window.
+
+{% else %}
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: {{ syscfg.hostname | tojson }}
+      when: {{ "true" if syscfg.hostname else "false" }}
+
+{% if syscfg.timezone and host_os == "linux" %}
+    - name: Set timezone
+      community.general.timezone:
+        name: {{ syscfg.timezone | tojson }}
+
+{% endif %}
+    - name: Review locale
+      ansible.builtin.debug:
+        msg: {{ ("Source locale was " ~ syscfg.locale) | tojson }}
+      when: {{ "true" if syscfg.locale else "false" }}
+
+{% endif %}
+{% endfor %}
 {% endif %}
 
 {% if apt_packages %}
@@ -48,6 +108,21 @@
         state: present
 
 {% endif %}
+{% if windows_packages %}
+    # ── Windows Installed Programs ────────────────────────────────────────────
+    # Windows registry inventory is review output. Many programs do not expose
+    # a safe unattended installer command, so Replibook preserves the facts
+    # instead of generating fragile install tasks.
+{% for pkg in windows_packages %}
+    - name: Review Windows program {{ pkg.name | tojson }}
+      ansible.builtin.debug:
+        msg:
+          name: {{ pkg.name | tojson }}
+          version: {{ pkg.version | tojson }}
+          source: {{ pkg.manager | tojson }}
+
+{% endfor %}
+{% endif %}
 {% if systemd_services %}
     # ── Systemd Services ──────────────────────────────────────────────────────
 {% for svc in systemd_services %}
@@ -67,6 +142,64 @@
         name: {{ svc.name | tojson }}
         state: {{ svc.state }}
 
+{% endfor %}
+{% endif %}
+{% if windows_services %}
+    # ── Windows Services ──────────────────────────────────────────────────────
+{% for svc in windows_services %}
+    - name: Review Windows service {{ svc.name | tojson }}
+      ansible.builtin.debug:
+        msg:
+          name: {{ svc.name | tojson }}
+          state: {{ svc.state | tojson }}
+          enabled: {{ svc.enabled | tojson }}
+
+    - name: Configure Windows service {{ svc.name | tojson }}
+      ansible.windows.win_service:
+        name: {{ svc.name | tojson }}
+        state: {{ svc.state }}
+        start_mode: {{ "auto" if svc.enabled else "manual" }}
+      when: false  # Enable only after confirming service impact on Windows.
+
+{% endfor %}
+{% endif %}
+{% if scheduled_tasks %}
+    # ── Scheduled Tasks ───────────────────────────────────────────────────────
+    # Scheduled tasks are generated as review output only.
+    # Re-enable manually after confirming user, paths, environment and secrets.
+{% for task in scheduled_tasks %}
+    - name: Review scheduled task {{ task.name | tojson }}
+      ansible.builtin.debug:
+        msg:
+          name: {{ task.name | tojson }}
+          source: {{ task.source | tojson }}
+          manager: {{ task.manager | tojson }}
+          schedule: {{ task.schedule | tojson }}
+          user: {{ task.user | tojson }}
+          command: {{ task.command | tojson }}
+
+{% if task.manager == "cron" and task.schedule and task.command %}
+    - name: Configure cron task {{ task.name | tojson }}
+      ansible.builtin.cron:
+        name: {{ task.name | tojson }}
+{% set cron_parts = task.schedule.split() %}
+{% if cron_parts | length == 5 %}
+        minute: {{ cron_parts[0] | tojson }}
+        hour: {{ cron_parts[1] | tojson }}
+        day: {{ cron_parts[2] | tojson }}
+        month: {{ cron_parts[3] | tojson }}
+        weekday: {{ cron_parts[4] | tojson }}
+{% elif task.schedule.startswith("@") %}
+        special_time: {{ task.schedule[1:] | tojson }}
+{% endif %}
+{% if task.user %}
+        user: {{ task.user | tojson }}
+{% endif %}
+        job: {{ task.command | tojson }}
+        state: present
+      when: false  # Enable only after reviewing scheduled-task impact.
+
+{% endif %}
 {% endfor %}
 {% endif %}
 {% if containers %}
@@ -107,5 +240,41 @@
         project_src: {{ d.directory | tojson }}
         state: present
 
+{% endfor %}
+{% endif %}
+{% if network_interfaces %}
+    # ── Network Configuration ──────────────────────────────────────────────────
+    # Network tasks are intentionally generated as disabled examples.
+    # Review interface names, addresses, gateways and DNS before enabling them.
+{% for iface in network_interfaces %}
+    - name: Review network configuration for {{ iface.name | tojson }}
+      ansible.builtin.debug:
+        msg:
+          interface: {{ iface.name | tojson }}
+          manager: {{ iface.manager | tojson }}
+          connection_name: {{ iface.connection_name | tojson }}
+          method: {{ iface.method | tojson }}
+          addresses: {{ iface.addresses | tojson }}
+          gateway4: {{ iface.gateway4 | tojson }}
+          nameservers: {{ iface.nameservers | tojson }}
+
+{% if iface.manager == "networkmanager" and iface.addresses %}
+    - name: Configure NetworkManager connection {{ (iface.connection_name or iface.name) | tojson }}
+      community.general.nmcli:
+        conn_name: {{ (iface.connection_name or iface.name) | tojson }}
+        ifname: {{ iface.name | tojson }}
+        type: ethernet
+        method4: {{ iface.method | tojson }}
+        ip4: {{ iface.addresses | tojson }}
+{% if iface.gateway4 %}
+        gw4: {{ iface.gateway4 | tojson }}
+{% endif %}
+{% if iface.nameservers %}
+        dns4: {{ iface.nameservers | tojson }}
+{% endif %}
+        state: present
+      when: false  # Enable only after reviewing network impact.
+
+{% endif %}
 {% endfor %}
 {% endif %}

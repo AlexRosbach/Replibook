@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F172A"/>
+      <stop offset="100%" style="stop-color:#1E293B"/>
+    </linearGradient>
+    <linearGradient id="pageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22D3EE"/>
+      <stop offset="100%" style="stop-color:#0EA5E9"/>
+    </linearGradient>
+    <filter id="g">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="120" height="120" rx="22" fill="url(#bg)"/>
+
+  <!-- Back page -->
+  <rect x="14" y="24" width="58" height="72" rx="6" fill="#155E75"/>
+
+  <!-- Code lines on back page -->
+  <rect x="22" y="36" width="28" height="3" rx="1.5" fill="#67E8F9" opacity="0.3"/>
+  <rect x="22" y="44" width="40" height="3" rx="1.5" fill="#67E8F9" opacity="0.2"/>
+  <rect x="22" y="52" width="22" height="3" rx="1.5" fill="#67E8F9" opacity="0.3"/>
+
+  <!-- Front page -->
+  <rect x="26" y="14" width="58" height="72" rx="6" fill="url(#pageGrad)" filter="url(#g)"/>
+
+  <!-- Code lines on front page -->
+  <rect x="35" y="27" width="16" height="3" rx="1.5" fill="#0C4A6E" opacity="0.75"/>
+  <rect x="55" y="27" width="20" height="3" rx="1.5" fill="#0C4A6E" opacity="0.45"/>
+  <rect x="35" y="36" width="38" height="3" rx="1.5" fill="#0C4A6E" opacity="0.6"/>
+  <rect x="35" y="45" width="12" height="3" rx="1.5" fill="#0C4A6E" opacity="0.75"/>
+  <rect x="51" y="45" width="22" height="3" rx="1.5" fill="#0C4A6E" opacity="0.45"/>
+  <rect x="35" y="54" width="32" height="3" rx="1.5" fill="#0C4A6E" opacity="0.6"/>
+  <rect x="35" y="63" width="20" height="3" rx="1.5" fill="#0C4A6E" opacity="0.75"/>
+
+  <!-- Scan line -->
+  <line x1="26" y1="72" x2="84" y2="72" stroke="#F0F9FF" stroke-width="1.5" opacity="0.2" stroke-dasharray="4 3"/>
+
+  <!-- Reproduce arrow circle -->
+  <circle cx="90" cy="88" r="14" fill="#0F172A" opacity="0.85"/>
+  <polyline points="84,88 96,88" stroke="#22D3EE" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <polyline points="92,84 96,88 92,92" stroke="#22D3EE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

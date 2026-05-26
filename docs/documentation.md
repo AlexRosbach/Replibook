@@ -1,27 +1,32 @@
 # Replibook — Documentation
 
+![Replibook logo](../replibook/assets/replibook-logo.svg)
+
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [Requirements](#requirements)
 3. [Installation](#installation)
 4. [Usage](#usage)
-5. [Scanner Modules](#scanner-modules)
-6. [Generated Output](#generated-output)
-7. [Applying the Playbook](#applying-the-playbook)
-8. [Operational Boundaries](#operational-boundaries)
-9. [Troubleshooting](#troubleshooting)
+5. [Windows Desktop App](#windows-desktop-app)
+6. [Scanner Modules](#scanner-modules)
+7. [Generated Output](#generated-output)
+8. [Applying the Playbook](#applying-the-playbook)
+9. [Operational Boundaries](#operational-boundaries)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Overview
 
-Replibook scans a running Linux or macOS machine and produces a working Ansible playbook that can recreate it on a new host. It auto-detects the operating system and uses the right toolchain on each:
+Replibook scans a running Linux, macOS or Windows machine and produces a working Ansible playbook that can recreate or document the host. It auto-detects the operating system and uses the right toolchain on each:
 
 - **Linux** — `apt` / `dpkg` for packages, `systemd` for services
 - **macOS** — `Homebrew` formulas and casks, `brew services`
+- **Windows** — PowerShell and registry-based inventory for programs, services, network settings and scheduled tasks
 
-Docker container and Docker Compose deployment scanning works identically on both platforms.
+Docker container and Docker Compose deployment scanning works across supported platforms when Docker is available.
+System and network configuration scanning provide additional context for reproducing a host, with network changes guarded by review steps.
 
 For quick setup and common failure cases, also see the [Knowledge Base / FAQ](knowledgebase.md).
 
@@ -29,10 +34,11 @@ For quick setup and common failure cases, also see the [Knowledge Base / FAQ](kn
 
 ## Requirements
 
-- **OS**: Linux (Debian/Ubuntu) or macOS
+- **OS**: Linux (Debian/Ubuntu), macOS or Windows
 - **Python**: 3.10 or higher
 - **Optional**: Docker daemon (for container scanning)
 - **Optional**: Homebrew (macOS only, for package/service scanning)
+- **Optional on Windows app**: WSL or another Ansible-capable command for applying playbooks
 
 ---
 
@@ -45,29 +51,29 @@ For quick setup and common failure cases, also see the [Knowledge Base / FAQ](kn
 **macOS:**
 ```bash
 brew install pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 **Linux:**
 ```bash
 apt install pipx
 # or: pip install --user pipx
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 ### Install a specific version
 
 ```bash
-pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
-# replace @v1.0.1 with another tag, or omit @<tag> for latest development
+pipx install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
+# replace @v1.1.0 with another tag, or omit @<tag> for latest development
 ```
 
 ### Alternative: pip from GitHub
 
 ```bash
-python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+python3 -m pip install --user git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 # or inside a virtual environment:
-python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.0.1
+python3 -m pip install git+https://github.com/AlexRosbach/Replibook.git@v1.1.0
 ```
 
 ### From source
@@ -77,6 +83,22 @@ git clone https://github.com/AlexRosbach/Replibook.git
 cd Replibook
 pip install -e .
 ```
+
+### Windows executable
+
+`Replibook.exe` is built with `scripts/build-windows.ps1`. Release builds can attach the resulting executable to GitHub release assets.
+
+To build it manually on Windows:
+
+```powershell
+git clone https://github.com/AlexRosbach/Replibook.git
+cd Replibook
+.\scripts\build-windows.ps1
+```
+
+The output is written to `dist\Replibook.exe`.
+
+The build script fails if `dist\Replibook.exe` is not created, which makes it suitable for local release builds or a future Windows CI job.
 
 ---
 
@@ -91,9 +113,10 @@ replibook
 ```
 
 You'll be prompted to:
-1. Select which modules to scan, with a short explanation for each module
-2. Confirm or change the output directory
-3. Decide whether the generated inventory targets this machine or another host over SSH
+1. Choose whether to scan this machine or apply an existing playbook
+2. Select which modules to scan, with a short explanation for each module
+3. Confirm or change the output directory
+4. Decide whether the generated inventory targets this machine or another host over SSH
 
 ### One-shot mode
 
@@ -103,6 +126,21 @@ replibook --all
 
 # Scan everything, custom output dir
 replibook --all --output /opt/playbooks
+
+# Practical role scan for rebuilding a configured host
+replibook scan --profile role --output ./playbooks
+
+# Terminal server style scan: system, programs, services, tasks and network context
+replibook scan --profile terminal_server --output ./playbooks
+
+# Other practical role scans
+replibook scan --profile workstation --output ./playbooks
+replibook scan --profile web_server --output ./playbooks
+replibook scan --profile database_server --output ./playbooks
+replibook scan --profile automation_node --output ./playbooks
+
+# Container-focused host scan
+replibook scan --profile container_host --output ./playbooks
 
 # Scan everything and generate SSH inventory for another host
 replibook --all \
@@ -120,6 +158,8 @@ replibook --all \
 |---|---|---|---|
 | `--output` | `-o` | `./playbooks` | Directory where playbooks are written |
 | `--all` | `-a` | `false` | Skip menu, run all modules |
+| `--profile` | | | Role-oriented scan profile: `role`, `terminal_server`, `container_host`, or `full` |
+| `--modules` | | | Comma-separated scanner keys for automation, e.g. `system,network,scheduled_tasks` |
 | `--target-connection` | | `local` | Inventory connection type: `local` or `ssh` |
 | `--target-name` | | | Inventory host name |
 | `--target-host` | | | Target IP address or hostname for SSH inventory |
@@ -129,6 +169,55 @@ replibook --all \
 | `--target-become` / `--no-target-become` | | OS default | Override sudo/become usage in the generated playbook |
 | `--version` | | | Print version and exit |
 | `--help` | | | Show help and exit |
+
+### Commander / automation usage
+
+Every major workflow exposed by the desktop app is also reachable from the command line:
+
+```bash
+# List scanner module keys for this platform
+replibook modules
+
+# List role-oriented scan profiles
+replibook profiles
+
+# Run only selected scanner modules
+replibook scan --modules system,network,scheduled_tasks --output ./playbooks
+
+# Run all scanners without prompts
+replibook scan --all --output ./playbooks
+
+# Launch the desktop app from a shell or automation launcher
+replibook gui
+
+# Apply from automation
+replibook apply ./playbooks/myhost_playbook.yml --inventory ./playbooks/inventory.ini --check --yes
+```
+
+### Review preview, snapshots and drift
+
+Every generated playbook starts with a Replibook review summary. It lists included sections, item counts and safety classes:
+
+- `high` — usually safe to automate after normal review
+- `medium` — can affect availability or host identity
+- `review` — keep as review-first until paths, users and data are checked
+- `danger` — disabled examples that can break access, especially network settings
+
+Replibook also writes `replibook-review.json` next to the generated playbook. Use it as a compact checklist before sharing or applying output.
+
+For repeatable documentation, save raw scan snapshots:
+
+```bash
+replibook scan --all --save-snapshot ./snapshots/server-a.json
+```
+
+Compare two snapshots later:
+
+```bash
+replibook diff ./snapshots/server-a-before.json ./snapshots/server-a-after.json
+```
+
+For remote machines, `replibook remote-recipe <host>` prints a guarded SSH/SCP workflow that installs/runs Replibook on the target, copies the snapshot back and leaves playbook generation/review on the operator machine.
 
 ### Apply command
 
@@ -149,9 +238,66 @@ The `apply` command does not hide Ansible. It validates the selected files, offe
 
 If network-related configuration is detected, Replibook asks for a second confirmation before applying changes. In non-interactive runs, network-sensitive playbooks require `--confirm-network-changes`; otherwise Replibook refuses to apply them.
 
+## Scan Profiles
+
+Profiles keep Replibook useful for real rebuild work instead of collecting everything just because a scanner exists.
+
+| Profile | Intended use | Included modules |
+|---|---|---|
+| `role` | Default rebuild/documentation scan for a configured server or workstation | system, packages/programs, services, scheduled tasks, network |
+| `terminal_server` | Reproduce terminal-server style hosts from an existing configured machine | system, packages/programs, services, scheduled tasks, network |
+| `workstation` | Reproduce a configured desktop or admin workstation | system, packages/programs, services, scheduled tasks, network |
+| `web_server` | Reproduce a web host, including optional container workloads | system, packages/programs, services, scheduled tasks, Docker, Compose, network |
+| `database_server` | Reproduce database-oriented hosts while keeping data backup as a separate step | system, packages/programs, services, scheduled tasks, network |
+| `automation_node` | Reproduce automation hosts such as schedulers, deployment nodes or lab runners | system, packages/programs, services, scheduled tasks, Docker, Compose, network |
+| `container_host` | Reproduce Docker-heavy hosts | system, packages/programs, services, Docker, Compose, network |
+| `full` | Discovery/audit mode when you intentionally want everything | all available modules |
+
+All profiles are cross-platform. A profile selects the same intent on Linux, macOS and Windows, while each scanner adapts to the platform-specific APIs and available tools.
+
+## Windows Desktop App
+
+The Windows app is a thin frontend over the same Replibook scanner, generator and apply workflow. It is meant for operators who want a clickable tool without replacing the backend.
+
+What it does:
+- creates playbook and inventory files through the shared generator backend
+- runs native Windows scans for system, installed programs, services, network settings, Docker, Compose files and scheduled tasks
+- exposes target inventory settings for local and SSH targets
+- applies generated playbooks by calling an Ansible command
+- defaults to `wsl ansible-playbook` on Windows, but accepts a custom command
+- blocks network-sensitive playbooks unless the user explicitly enables network confirmation
+
+Important limitation:
+
+Windows inventory differs from Linux/macOS inventory. Replibook records Windows programs and some scheduler details as review-first facts when there is no safe, generic Ansible install task. That keeps the information visible without generating fragile automation.
+
 ---
 
 ## Scanner Modules
+
+### System Configuration
+
+Reads hostname, timezone and locale. Generated playbooks include hostname/timezone tasks where supported and a locale review message.
+
+### Network Configuration
+
+**Linux:** Reads interface IPv4 addresses through `ip`, default gateway through `ip route`, DNS through `resolvectl` or `/etc/resolv.conf`, and NetworkManager connection details through `nmcli` when available.
+
+**macOS:** Reads network services, IP details, router and DNS through `networksetup`.
+
+**Windows:** Reads interface aliases, IPv4 addresses, gateways and DNS servers through `Get-NetIPConfiguration`.
+
+Network output is intentionally conservative. Replibook records the discovered settings and emits disabled NetworkManager example tasks when enough data is available. Review interface names, IP addresses, gateways and DNS before enabling those tasks.
+
+### Scheduled Tasks
+
+**Linux:** Reads the current user's crontab, `/etc/crontab`, files in `/etc/cron.d`, and scripts in `/etc/cron.hourly`, `/etc/cron.daily`, `/etc/cron.weekly` and `/etc/cron.monthly`.
+
+**macOS:** Reads the current user's crontab plus plist names from user and system LaunchAgents/LaunchDaemons locations.
+
+**Windows:** Reads non-Microsoft Windows Task Scheduler entries for review. Replibook does not try to recreate arbitrary scheduled tasks automatically because triggers, principals and credentials need operator review.
+
+Scheduled task output is generated as review-first content. Replibook records source, schedule, user and command where available; cron recreation tasks are disabled by default so paths, users, environment and secrets can be reviewed first.
 
 ### Packages
 
@@ -159,11 +305,15 @@ If network-related configuration is detected, Replibook asks for a second confir
 
 **macOS:** Reads `brew list --installed-on-request --formula` (formulas) and `brew list --cask` (apps). Generates `community.general.homebrew` and `community.general.homebrew_cask` tasks.
 
+**Windows:** Reads installed programs from the Windows uninstall registry. These entries are emitted as review facts because many installers do not expose a safe unattended install command.
+
 ### Services
 
 **Linux:** Reads `systemctl list-unit-files --state=enabled` (enabled services) and `list-units --state=active` (currently running). Kernel/transient units are filtered. Generates `ansible.builtin.service` tasks.
 
 **macOS:** Reads `brew services list` to find Homebrew-managed services. Generates `community.general.homebrew_services` tasks. (Launchd-only services outside Homebrew are not scanned.)
+
+**Windows:** Reads running or automatically started services through PowerShell. Generated `ansible.windows.win_service` tasks are disabled by default until service impact is reviewed.
 
 ### Docker Containers
 
@@ -222,6 +372,7 @@ web01 ansible_host=192.168.1.50 ansible_user=ubuntu ansible_port=22 ansible_ssh_
     # ── Homebrew Casks ──      (macOS only)
     # ── Systemd Services ──    (Linux only)
     # ── Homebrew Services ──   (macOS only)
+    # ── Scheduled Tasks ──
     # ── Docker Containers ──
     # ── Docker Compose Deployments ──
 ```
@@ -279,11 +430,13 @@ replibook apply network_playbook.yml --inventory inventory.ini --yes --confirm-n
 
 ## Operational Boundaries
 
-- Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, Docker containers and Compose deployments.
+- Replibook does not guarantee a byte-for-byte clone of a machine. It creates a practical Ansible starting point from installed packages, services, Docker containers, Compose deployments, system settings and network metadata.
 - Generated playbooks can include sensitive Docker environment variables. Review and replace secrets with Ansible Vault variables before sharing output.
 - Replibook does not back up Docker volumes, bind-mounted files, databases, uploads, application data or arbitrary files. Back up and restore data separately.
 - The `apply` command is a convenience wrapper around `ansible-playbook`; understanding and reviewing the generated playbook still matters.
 - Network-related playbooks require extra confirmation because they can interrupt SSH connectivity or remote access.
+- Generated network tasks are disabled examples where appropriate; enable them only after review.
+- Scheduled task recreation tasks are disabled examples where appropriate; review user context, paths and secrets before enabling them.
 - Linux package scanning currently targets apt/dpkg-based systems. RPM-based distributions are not supported yet.
 - macOS scanning targets Homebrew-managed packages and services. Launchd services outside Homebrew are not scanned.
 - Docker Compose discovery records project directories; it does not copy compose files, env files or application data.

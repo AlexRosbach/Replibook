@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "replibook"
-version = "1.0.1"
-description = "Scan Linux or macOS hosts and generate Ansible playbooks to reproduce them."
+version = "1.1.0"
+description = "Scan Linux, macOS, or Windows hosts and generate Ansible playbooks to reproduce them."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
@@ -19,6 +19,7 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -33,10 +34,12 @@ dependencies = [
     "jinja2>=3.1.4",
     "docker>=7.1.0",
     "pyyaml>=6.0.1",
+    "customtkinter>=5.2.2",
 ]
 
 [project.scripts]
 replibook = "replibook.main:main"
+replibook-gui = "replibook.gui.app:main"
 
 [project.urls]
 Homepage = "https://github.com/AlexRosbach/Replibook"
@@ -47,4 +50,4 @@ Issues = "https://github.com/AlexRosbach/Replibook/issues"
 include = ["replibook*"]
 
 [tool.setuptools.package-data]
-replibook = ["generator/templates/*.j2"]
+replibook = ["generator/templates/*.j2", "assets/*"]

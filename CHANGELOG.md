@@ -4,6 +4,35 @@ All notable changes to Replibook are documented here.
 
 ---
 
+## [1.1.0] — 2026-05-19
+
+### Added
+- Hardened Windows EXE build script validation so `scripts/build-windows.ps1` fails when `dist/Replibook.exe` is not created.
+- Windows EXE packaging now includes generator templates so `Replibook.exe` can generate playbooks without missing `site.yml.j2`.
+- Role-oriented scan profiles (`role`, `workstation`, `web_server`, `database_server`, `terminal_server`, `automation_node`, `container_host`, `full`) for useful reproduction scans without default Docker/Compose noise.
+- GitHub and bug-report links in the desktop app, plus CLI output hints for Linux/macOS/Windows users.
+- CustomTkinter desktop UI with modern sidebar profile selection, cleaner cards, rounded controls and improved log view.
+- Review preview and safety classification for generated playbook sections, including a `replibook-review.json` sidecar report.
+- Optional section exclusion after scanning via interactive prompts or `--exclude-sections`.
+- Scan snapshot export via `--save-snapshot` and `replibook diff` for drift comparison between two snapshots.
+- Remote scan recipe command that prints an SSH/SCP workflow for collecting scan snapshots from another machine.
+- Backup and migration hints for Docker, Compose, network and scheduled-task findings.
+- Startup wizard that asks whether to scan or apply when `replibook` is run without explicit command-line options.
+- Network scanner for interface addresses, default gateway, DNS and NetworkManager connection details where available.
+- System configuration scanner for hostname, timezone and locale.
+- Scheduled task scanner for cron, `/etc/cron.*` and macOS launchd plist locations.
+- Generated playbooks now include reviewed network and system configuration sections.
+- Generated playbooks now include reviewed scheduled task sections, with cron recreation tasks disabled by default.
+- Windows desktop app frontend with Replibook branding, shared generator backend, playbook apply support and a PowerShell build script for EXE packaging.
+- Native Windows scanners for installed programs, services, network configuration and scheduled tasks.
+- `replibook modules`, `replibook gui`, and `replibook scan --modules ...` for commander-friendly automation.
+
+### Fixed
+- Addressed Copilot review findings for Windows service `StartMode`, Tkinter availability, Ansible runner error reporting, scan-module validation, OS docstrings and generic no-result messages.
+- Fixed Windows `charmap` failures while generating playbooks by writing generated playbook and inventory files as UTF-8.
+
+---
+
 ## [1.0.1] — 2026-05-19
 
 ### Added

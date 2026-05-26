@@ -1,3 +1,5 @@
+import json
+
 from replibook.scanner.base import BaseScanner
 from replibook.models.scan_result import ServiceInfo
 from replibook.utils import detect_os, has_command
@@ -13,6 +15,8 @@ class ServiceScanner(BaseScanner):
         os_name = detect_os()
         if os_name == "macos":
             return self._scan_macos()
+        if os_name == "windows":
+            return self._scan_windows()
         return self._scan_linux()
 
     # ── Linux (systemd) ───────────────────────────────────────────────────
@@ -72,3 +76,43 @@ class ServiceScanner(BaseScanner):
                 manager="homebrew",
             ))
         return sorted(services, key=lambda s: s.name)
+
+    # ── Windows services ──────────────────────────────────────────────────
+
+    def _scan_windows(self) -> list[ServiceInfo]:
+        if not has_command("powershell"):
+            return []
+
+        script = r"""
+Get-CimInstance Win32_Service |
+  Where-Object { $_.State -eq 'Running' -or $_.StartMode -in @('Auto', 'Automatic') } |
+  Select-Object Name, State, StartMode |
+  Sort-Object Name |
+  ConvertTo-Json -Depth 3
+"""
+        output = self._run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
+        services = []
+        for item in self._json_list(output):
+            name = str(item.get("Name", "")).strip()
+            if not name:
+                continue
+            state = str(item.get("State", "")).lower()
+            start_mode = str(item.get("StartMode", "")).lower()
+            services.append(ServiceInfo(
+                name=name,
+                enabled=start_mode in {"auto", "automatic"},
+                state="started" if state == "running" else "stopped",
+                manager="windows",
+            ))
+        return services
+
+    def _json_list(self, output: str) -> list[dict]:
+        if not output:
+            return []
+        try:
+            data = json.loads(output)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(data, dict):
+            return [data]
+        return data if isinstance(data, list) else []

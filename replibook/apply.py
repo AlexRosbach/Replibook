@@ -124,6 +124,11 @@ def _contains_network_sensitive_content(playbook_path: Path) -> bool:
         return False
 
 
+def contains_network_sensitive_content(playbook_path: Path) -> bool:
+    """Return True when a generated playbook appears to contain network changes."""
+    return _contains_network_sensitive_content(playbook_path)
+
+
 def apply_playbook(
     playbook: str,
     inventory: str = "inventory.ini",
